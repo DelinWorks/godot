@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  emws_server.cpp                                                      */
+/*  cast_2d_editor_plugin.h                                              */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,65 +28,52 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifdef JAVASCRIPT_ENABLED
+#ifndef CAST_2D_EDITOR_PLUGIN_H
+#define CAST_2D_EDITOR_PLUGIN_H
 
-#include "emws_server.h"
-#include "core/os/os.h"
+#include "editor/editor_plugin.h"
+#include "scene/2d/node_2d.h"
 
-void EMWSServer::set_extra_headers(const Vector<String> &p_headers) {
-}
+class CanvasItemEditor;
 
-Error EMWSServer::listen(int p_port, Vector<String> p_protocols, bool gd_mp_api) {
-	return FAILED;
-}
+class Cast2DEditor : public Control {
+	GDCLASS(Cast2DEditor, Control);
 
-bool EMWSServer::is_listening() const {
-	return false;
-}
+	UndoRedo *undo_redo = nullptr;
+	CanvasItemEditor *canvas_item_editor = nullptr;
+	Node2D *node;
 
-void EMWSServer::stop() {
-}
+	bool pressed = false;
+	Point2 original_target_position;
 
-bool EMWSServer::has_peer(int p_id) const {
-	return false;
-}
+protected:
+	void _notification(int p_what);
+	void _node_removed(Node *p_node);
 
-Ref<WebSocketPeer> EMWSServer::get_peer(int p_id) const {
-	return nullptr;
-}
+public:
+	bool forward_canvas_gui_input(const Ref<InputEvent> &p_event);
+	void forward_canvas_draw_over_viewport(Control *p_overlay);
+	void edit(Node2D *p_node);
 
-Vector<String> EMWSServer::get_protocols() const {
-	Vector<String> out;
+	Cast2DEditor();
+};
 
-	return out;
-}
+class Cast2DEditorPlugin : public EditorPlugin {
+	GDCLASS(Cast2DEditorPlugin, EditorPlugin);
 
-IPAddress EMWSServer::get_peer_address(int p_peer_id) const {
-	return IPAddress();
-}
+	Cast2DEditor *cast_2d_editor = nullptr;
 
-int EMWSServer::get_peer_port(int p_peer_id) const {
-	return 0;
-}
+public:
+	virtual bool forward_canvas_gui_input(const Ref<InputEvent> &p_event) override { return cast_2d_editor->forward_canvas_gui_input(p_event); }
+	virtual void forward_canvas_draw_over_viewport(Control *p_overlay) override { cast_2d_editor->forward_canvas_draw_over_viewport(p_overlay); }
 
-void EMWSServer::disconnect_peer(int p_peer_id, int p_code, String p_reason) {
-}
+	virtual String get_name() const override { return "Cast2D"; }
+	bool has_main_screen() const override { return false; }
+	virtual void edit(Object *p_object) override;
+	virtual bool handles(Object *p_object) const override;
+	virtual void make_visible(bool visible) override;
 
-void EMWSServer::poll() {
-}
+	Cast2DEditorPlugin();
+};
 
-int EMWSServer::get_max_packet_size() const {
-	return 0;
-}
-
-Error EMWSServer::set_buffers(int p_in_buffer, int p_in_packets, int p_out_buffer, int p_out_packets) {
-	return OK;
-}
-
-EMWSServer::EMWSServer() {
-}
-
-EMWSServer::~EMWSServer() {
-}
-
-#endif // JAVASCRIPT_ENABLED
+#endif // CAST_2D_EDITOR_PLUGIN_H

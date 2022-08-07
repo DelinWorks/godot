@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  emws_server.h                                                        */
+/*  framebuffer_cache_rd.cpp                                             */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,37 +28,37 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef EMWS_SERVER_H
-#define EMWS_SERVER_H
+#include "framebuffer_cache_rd.h"
 
-#ifdef JAVASCRIPT_ENABLED
+FramebufferCacheRD *FramebufferCacheRD::singleton = nullptr;
 
-#include "core/object/ref_counted.h"
-#include "emws_peer.h"
-#include "websocket_server.h"
+void FramebufferCacheRD::_invalidate(Cache *p_cache) {
+	if (p_cache->prev) {
+		p_cache->prev->next = p_cache->next;
+	} else {
+		// At beginning of table
+		uint32_t table_idx = p_cache->hash % HASH_TABLE_SIZE;
+		hash_table[table_idx] = p_cache->next;
+	}
 
-class EMWSServer : public WebSocketServer {
-	GDCIIMPL(EMWSServer, WebSocketServer);
+	if (p_cache->next) {
+		p_cache->next->prev = p_cache->prev;
+	}
 
-public:
-	Error set_buffers(int p_in_buffer, int p_in_packets, int p_out_buffer, int p_out_packets) override;
-	void set_extra_headers(const Vector<String> &p_headers) override;
-	Error listen(int p_port, Vector<String> p_protocols = Vector<String>(), bool gd_mp_api = false) override;
-	void stop() override;
-	bool is_listening() const override;
-	bool has_peer(int p_id) const override;
-	Ref<WebSocketPeer> get_peer(int p_id) const override;
-	IPAddress get_peer_address(int p_peer_id) const override;
-	int get_peer_port(int p_peer_id) const override;
-	void disconnect_peer(int p_peer_id, int p_code = 1000, String p_reason = "") override;
-	int get_max_packet_size() const override;
-	virtual void poll() override;
-	virtual Vector<String> get_protocols() const;
+	cache_allocator.free(p_cache);
+	cache_instances_used--;
+}
+void FramebufferCacheRD::_framebuffer_invalidation_callback(void *p_userdata) {
+	singleton->_invalidate(reinterpret_cast<Cache *>(p_userdata));
+}
 
-	EMWSServer();
-	~EMWSServer();
-};
+FramebufferCacheRD::FramebufferCacheRD() {
+	ERR_FAIL_COND(singleton != nullptr);
+	singleton = this;
+}
 
-#endif
-
-#endif // EMWS_SERVER_H
+FramebufferCacheRD::~FramebufferCacheRD() {
+	if (cache_instances_used > 0) {
+		ERR_PRINT("At exit: " + itos(cache_instances_used) + " framebuffer cache instance(s) still in use.");
+	}
+}
