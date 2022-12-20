@@ -57,6 +57,7 @@ protected:
 	bool _set(const StringName &p_name, const Variant &p_value);
 	bool _get(const StringName &p_name, Variant &r_ret) const;
 	void _get_property_list(List<PropertyInfo> *p_list) const;
+	bool surface_index_0 = false;
 
 	void _notification(int p_what);
 	static void _bind_methods();
@@ -90,6 +91,7 @@ public:
 	Node *create_multiple_convex_collisions_node();
 	void create_multiple_convex_collisions();
 
+	MeshInstance3D *create_debug_tangents_node();
 	void create_debug_tangents();
 
 	virtual AABB get_aabb() const override;

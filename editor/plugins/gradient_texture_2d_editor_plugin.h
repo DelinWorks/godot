@@ -31,6 +31,7 @@
 #ifndef GRADIENT_TEXTURE_2D_EDITOR_PLUGIN_H
 #define GRADIENT_TEXTURE_2D_EDITOR_PLUGIN_H
 
+#include "editor/editor_inspector.h"
 #include "editor/editor_plugin.h"
 #include "editor/editor_spin_slider.h"
 
@@ -44,7 +45,6 @@ class GradientTexture2DEditorRect : public Control {
 	};
 
 	Ref<GradientTexture2D> texture;
-	UndoRedo *undo_redo = nullptr;
 	bool snap_enabled = false;
 	float snap_size = 0;
 
@@ -74,7 +74,6 @@ class GradientTexture2DEditor : public VBoxContainer {
 	GDCLASS(GradientTexture2DEditor, VBoxContainer);
 
 	Ref<GradientTexture2D> texture;
-	UndoRedo *undo_redo = nullptr;
 
 	Button *reverse_button = nullptr;
 	Button *snap_button = nullptr;

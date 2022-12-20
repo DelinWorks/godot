@@ -31,7 +31,7 @@
 #include "editor_file_system.h"
 
 #include "core/config/project_settings.h"
-#include "core/extension/native_extension_manager.h"
+#include "core/extension/gdextension_manager.h"
 #include "core/io/file_access.h"
 #include "core/io/resource_importer.h"
 #include "core/io/resource_loader.h"
@@ -39,6 +39,7 @@
 #include "core/object/worker_thread_pool.h"
 #include "core/os/os.h"
 #include "core/variant/variant_parser.h"
+#include "editor/editor_help.h"
 #include "editor/editor_node.h"
 #include "editor/editor_paths.h"
 #include "editor/editor_resource_preview.h"
@@ -99,7 +100,7 @@ String EditorFileSystemDirectory::get_path() const {
 	String p;
 	const EditorFileSystemDirectory *d = this;
 	while (d->parent) {
-		p = d->name.plus_file(p);
+		p = d->name.path_join(p);
 		d = d->parent;
 	}
 
@@ -110,7 +111,7 @@ String EditorFileSystemDirectory::get_file_path(int p_idx) const {
 	String file = get_file(p_idx);
 	const EditorFileSystemDirectory *d = this;
 	while (d->parent) {
-		file = d->name.plus_file(file);
+		file = d->name.path_join(file);
 		d = d->parent;
 	}
 
@@ -219,7 +220,7 @@ void EditorFileSystem::_scan_filesystem() {
 
 	String project = ProjectSettings::get_singleton()->get_resource_path();
 
-	String fscache = EditorPaths::get_singleton()->get_project_settings_dir().plus_file(CACHE_FILE_NAME);
+	String fscache = EditorPaths::get_singleton()->get_project_settings_dir().path_join(CACHE_FILE_NAME);
 	{
 		Ref<FileAccess> f = FileAccess::open(fscache, FileAccess::READ);
 
@@ -261,7 +262,7 @@ void EditorFileSystem::_scan_filesystem() {
 					String file;
 
 					file = name;
-					name = cpath.plus_file(name);
+					name = cpath.path_join(name);
 
 					FileCache fc;
 					fc.type = split[1];
@@ -289,7 +290,7 @@ void EditorFileSystem::_scan_filesystem() {
 		}
 	}
 
-	String update_cache = EditorPaths::get_singleton()->get_project_settings_dir().plus_file("filesystem_update4");
+	String update_cache = EditorPaths::get_singleton()->get_project_settings_dir().path_join("filesystem_update4");
 
 	if (FileAccess::exists(update_cache)) {
 		{
@@ -332,7 +333,7 @@ void EditorFileSystem::_scan_filesystem() {
 void EditorFileSystem::_save_filesystem_cache() {
 	group_file_cache.clear();
 
-	String fscache = EditorPaths::get_singleton()->get_project_settings_dir().plus_file(CACHE_FILE_NAME);
+	String fscache = EditorPaths::get_singleton()->get_project_settings_dir().path_join(CACHE_FILE_NAME);
 
 	Ref<FileAccess> f = FileAccess::open(fscache, FileAccess::WRITE);
 	ERR_FAIL_COND_MSG(f.is_null(), "Cannot create file '" + fscache + "'. Check user write permissions.");
@@ -619,7 +620,12 @@ bool EditorFileSystem::_update_scan_actions() {
 				if (_test_for_reimport(full_path, false)) {
 					//must reimport
 					reimports.push_back(full_path);
-					reimports.append_array(_get_dependencies(full_path));
+					Vector<String> dependencies = _get_dependencies(full_path);
+					for (const String &dependency_path : dependencies) {
+						if (import_extensions.has(dependency_path.get_extension())) {
+							reimports.push_back(dependency_path);
+						}
+					}
 				} else {
 					//must not reimport, all was good
 					//update modified times, to avoid reimport
@@ -690,7 +696,6 @@ void EditorFileSystem::scan() {
 
 	_update_extensions();
 
-	abort_scan = false;
 	if (!use_threads) {
 		scanning = true;
 		scan_total = 0;
@@ -758,7 +763,7 @@ void EditorFileSystem::_scan_new_dir(EditorFileSystemDirectory *p_dir, Ref<DirAc
 				continue;
 			}
 
-			if (_should_skip_directory(cd.plus_file(f))) {
+			if (_should_skip_directory(cd.path_join(f))) {
 				continue;
 			}
 
@@ -822,7 +827,7 @@ void EditorFileSystem::_scan_new_dir(EditorFileSystemDirectory *p_dir, Ref<DirAc
 		EditorFileSystemDirectory::FileInfo *fi = memnew(EditorFileSystemDirectory::FileInfo);
 		fi->file = E->get();
 
-		String path = cd.plus_file(fi->file);
+		String path = cd.path_join(fi->file);
 
 		FileCache *fc = file_cache.getptr(path);
 		uint64_t mt = FileAccess::get_modified_time(path);
@@ -920,11 +925,11 @@ void EditorFileSystem::_scan_new_dir(EditorFileSystemDirectory *p_dir, Ref<DirAc
 		for (int i = 0; i < ScriptServer::get_language_count(); i++) {
 			ScriptLanguage *lang = ScriptServer::get_language(i);
 			if (lang->supports_documentation() && fi->type == lang->get_type()) {
-				Ref<Script> script = ResourceLoader::load(path);
-				if (script == nullptr) {
+				Ref<Script> scr = ResourceLoader::load(path);
+				if (scr == nullptr) {
 					continue;
 				}
-				Vector<DocData::ClassDoc> docs = script->get_documentation();
+				Vector<DocData::ClassDoc> docs = scr->get_documentation();
 				for (int j = 0; j < docs.size(); j++) {
 					EditorHelp::get_doc_data()->add_doc(docs[j]);
 				}
@@ -982,7 +987,7 @@ void EditorFileSystem::_scan_fs_changes(EditorFileSystemDirectory *p_dir, const 
 
 				int idx = p_dir->find_dir_index(f);
 				if (idx == -1) {
-					if (_should_skip_directory(cd.plus_file(f))) {
+					if (_should_skip_directory(cd.path_join(f))) {
 						continue;
 					}
 
@@ -991,7 +996,7 @@ void EditorFileSystem::_scan_fs_changes(EditorFileSystemDirectory *p_dir, const 
 					efd->parent = p_dir;
 					efd->name = f;
 					Ref<DirAccess> d = DirAccess::create(DirAccess::ACCESS_RESOURCES);
-					d->change_dir(cd.plus_file(f));
+					d->change_dir(cd.path_join(f));
 					_scan_new_dir(efd, d, p_progress.get_sub(1, 1));
 
 					ItemAction ia;
@@ -1017,7 +1022,7 @@ void EditorFileSystem::_scan_fs_changes(EditorFileSystemDirectory *p_dir, const 
 					EditorFileSystemDirectory::FileInfo *fi = memnew(EditorFileSystemDirectory::FileInfo);
 					fi->file = f;
 
-					String path = cd.plus_file(fi->file);
+					String path = cd.path_join(fi->file);
 					fi->modified_time = FileAccess::get_modified_time(path);
 					fi->import_modified_time = 0;
 					fi->type = ResourceLoader::get_resource_type(path);
@@ -1066,7 +1071,7 @@ void EditorFileSystem::_scan_fs_changes(EditorFileSystemDirectory *p_dir, const 
 			continue;
 		}
 
-		String path = cd.plus_file(p_dir->files[i]->file);
+		String path = cd.path_join(p_dir->files[i]->file);
 
 		if (import_extensions.has(p_dir->files[i]->file.get_extension().to_lower())) {
 			//check here if file must be imported or not
@@ -1162,8 +1167,6 @@ void EditorFileSystem::scan_changes() {
 	scanning_changes = true;
 	scanning_changes_done = false;
 
-	abort_scan = false;
-
 	if (!use_threads) {
 		if (filesystem) {
 			EditorProgressBG pr("sources", TTR("ScanSources"), 1000);
@@ -1192,16 +1195,9 @@ void EditorFileSystem::scan_changes() {
 
 void EditorFileSystem::_notification(int p_what) {
 	switch (p_what) {
-		case NOTIFICATION_ENTER_TREE: {
-			call_deferred(SNAME("scan")); //this should happen after every editor node entered the tree
-
-		} break;
-
 		case NOTIFICATION_EXIT_TREE: {
 			Thread &active_thread = thread.is_started() ? thread : thread_sources;
 			if (use_threads && active_thread.is_started()) {
-				//abort thread if in progress
-				abort_scan = true;
 				while (scanning) {
 					OS::get_singleton()->delay_usec(1000);
 				}
@@ -1457,7 +1453,7 @@ EditorFileSystemDirectory *EditorFileSystem::get_filesystem_path(const String &p
 
 void EditorFileSystem::_save_late_updated_files() {
 	//files that already existed, and were modified, need re-scanning for dependencies upon project restart. This is done via saving this special file
-	String fscache = EditorPaths::get_singleton()->get_project_settings_dir().plus_file("filesystem_update4");
+	String fscache = EditorPaths::get_singleton()->get_project_settings_dir().path_join("filesystem_update4");
 	Ref<FileAccess> f = FileAccess::open(fscache, FileAccess::WRITE);
 	ERR_FAIL_COND_MSG(f.is_null(), "Cannot create file '" + fscache + "'. Check user write permissions.");
 	for (const String &E : late_update_files) {
@@ -1646,6 +1642,7 @@ Error EditorFileSystem::_reimport_group(const String &p_group_file, const Vector
 	String importer_name;
 
 	HashMap<String, HashMap<StringName, Variant>> source_file_options;
+	HashMap<String, ResourceUID::ID> uids;
 	HashMap<String, String> base_paths;
 	for (int i = 0; i < p_files.size(); i++) {
 		Ref<ConfigFile> config;
@@ -1660,6 +1657,15 @@ Error EditorFileSystem::_reimport_group(const String &p_group_file, const Vector
 			EditorNode::get_singleton()->show_warning(vformat(TTR("There are multiple importers for different types pointing to file %s, import aborted"), p_group_file));
 			ERR_FAIL_V(ERR_FILE_CORRUPT);
 		}
+
+		ResourceUID::ID uid = ResourceUID::INVALID_ID;
+
+		if (config->has_section_key("remap", "uid")) {
+			String uidt = config->get_value("remap", "uid");
+			uid = ResourceUID::get_singleton()->text_to_id(uidt);
+		}
+
+		uids[p_files[i]] = uid;
 
 		source_file_options[p_files[i]] = HashMap<StringName, Variant>();
 		importer_name = file_importer_name;
@@ -1705,6 +1711,7 @@ Error EditorFileSystem::_reimport_group(const String &p_group_file, const Vector
 		const String &file = E.key;
 		String base_path = ResourceFormatImporter::get_singleton()->get_import_base_path(file);
 		Vector<String> dest_paths;
+		ResourceUID::ID uid = uids[file];
 		{
 			Ref<FileAccess> f = FileAccess::open(file + ".import", FileAccess::WRITE);
 			ERR_FAIL_COND_V_MSG(f.is_null(), ERR_FILE_CANT_OPEN, "Cannot open import file '" + file + ".import'.");
@@ -1720,6 +1727,12 @@ Error EditorFileSystem::_reimport_group(const String &p_group_file, const Vector
 			if (!importer->get_resource_type().is_empty()) {
 				f->store_line("type=\"" + importer->get_resource_type() + "\"");
 			}
+
+			if (uid == ResourceUID::INVALID_ID) {
+				uid = ResourceUID::get_singleton()->create_id();
+			}
+
+			f->store_line("uid=\"" + ResourceUID::get_singleton()->id_to_text(uid) + "\""); // Store in readable format.
 
 			if (err == OK) {
 				String path = base_path + "." + importer->get_save_extension();
@@ -1786,11 +1799,18 @@ Error EditorFileSystem::_reimport_group(const String &p_group_file, const Vector
 		fs->files[cpos]->modified_time = FileAccess::get_modified_time(file);
 		fs->files[cpos]->import_modified_time = FileAccess::get_modified_time(file + ".import");
 		fs->files[cpos]->deps = _get_dependencies(file);
+		fs->files[cpos]->uid = uid;
 		fs->files[cpos]->type = importer->get_resource_type();
 		if (fs->files[cpos]->type == "" && textfile_extensions.has(file.get_extension())) {
 			fs->files[cpos]->type = "TextFile";
 		}
 		fs->files[cpos]->import_valid = err == OK;
+
+		if (ResourceUID::get_singleton()->has_id(uid)) {
+			ResourceUID::get_singleton()->set_id(uid, file);
+		} else {
+			ResourceUID::get_singleton()->add_id(uid, file);
+		}
 
 		//if file is currently up, maybe the source it was loaded from changed, so import math must be updated for it
 		//to reload properly
@@ -1898,7 +1918,7 @@ void EditorFileSystem::_reimport_file(const String &p_file, const HashMap<String
 
 	if (load_default && ProjectSettings::get_singleton()->has_setting("importer_defaults/" + importer->get_importer_name())) {
 		//use defaults if exist
-		Dictionary d = ProjectSettings::get_singleton()->get("importer_defaults/" + importer->get_importer_name());
+		Dictionary d = GLOBAL_GET("importer_defaults/" + importer->get_importer_name());
 		List<Variant> v;
 		d.get_key_list(&v);
 
@@ -1912,8 +1932,8 @@ void EditorFileSystem::_reimport_file(const String &p_file, const HashMap<String
 
 	List<String> import_variants;
 	List<String> gen_files;
-	Variant metadata;
-	Error err = importer->import(p_file, base_path, params, &import_variants, &gen_files, &metadata);
+	Variant meta;
+	Error err = importer->import(p_file, base_path, params, &import_variants, &gen_files, &meta);
 
 	if (err != OK) {
 		ERR_PRINT("Error importing '" + p_file + "'.");
@@ -1965,8 +1985,8 @@ void EditorFileSystem::_reimport_file(const String &p_file, const HashMap<String
 			f->store_line("valid=false");
 		}
 
-		if (metadata != Variant()) {
-			f->store_line("metadata=" + metadata.get_construct_string());
+		if (meta != Variant()) {
+			f->store_line("metadata=" + meta.get_construct_string());
 		}
 
 		f->store_line("");
@@ -2078,6 +2098,8 @@ void EditorFileSystem::reimport_files(const Vector<String> &p_files) {
 	importing = true;
 	EditorProgress pr("reimport", TTR("(Re)Importing Assets"), p_files.size());
 
+	Vector<String> reloads;
+
 	Vector<ImportFile> reimport_files;
 
 	HashSet<String> groups_to_reimport;
@@ -2093,22 +2115,26 @@ void EditorFileSystem::reimport_files(const Vector<String> &p_files) {
 		String group_file = ResourceFormatImporter::get_singleton()->get_import_group_file(file);
 
 		if (group_file_cache.has(file)) {
-			//maybe the file itself is a group!
+			// Maybe the file itself is a group!
 			groups_to_reimport.insert(file);
-			//groups do not belong to grups
+			// Groups do not belong to groups.
+			group_file = String();
+		} else if (groups_to_reimport.has(file)) {
+			// Groups do not belong to groups.
 			group_file = String();
 		} else if (!group_file.is_empty()) {
-			//it's a group file, add group to import and skip this file
+			// It's a group file, add group to import and skip this file.
 			groups_to_reimport.insert(group_file);
 		} else {
-			//it's a regular file
+			// It's a regular file.
 			ImportFile ifile;
 			ifile.path = file;
 			ResourceFormatImporter::get_singleton()->get_import_order_threads_and_importer(file, ifile.order, ifile.threaded, ifile.importer);
+			reloads.push_back(file);
 			reimport_files.push_back(ifile);
 		}
 
-		//group may have changed, so also update group reference
+		// Group may have changed, so also update group reference.
 		EditorFileSystemDirectory *fs = nullptr;
 		int cpos = -1;
 		if (_find_file(file, &fs, cpos)) {
@@ -2118,14 +2144,18 @@ void EditorFileSystem::reimport_files(const Vector<String> &p_files) {
 
 	reimport_files.sort();
 
-	bool use_threads = GLOBAL_GET("editor/import/use_multiple_threads");
+	bool use_multiple_threads = GLOBAL_GET("editor/import/use_multiple_threads");
 
 	int from = 0;
 	for (int i = 0; i < reimport_files.size(); i++) {
-		if (use_threads && reimport_files[i].threaded) {
+		if (groups_to_reimport.has(reimport_files[i].path)) {
+			continue;
+		}
+
+		if (use_multiple_threads && reimport_files[i].threaded) {
 			if (i + 1 == reimport_files.size() || reimport_files[i + 1].importer != reimport_files[from].importer) {
 				if (from - i == 0) {
-					//single file, do not use threads
+					// Single file, do not use threads.
 					pr.step(reimport_files[i].path.get_file(), i);
 					_reimport_file(reimport_files[i].path);
 				} else {
@@ -2134,16 +2164,16 @@ void EditorFileSystem::reimport_files(const Vector<String> &p_files) {
 
 					importer->import_threaded_begin();
 
-					ImportThreadData data;
-					data.max_index = from;
-					data.reimport_from = from;
-					data.reimport_files = reimport_files.ptr();
+					ImportThreadData tdata;
+					tdata.max_index = from;
+					tdata.reimport_from = from;
+					tdata.reimport_files = reimport_files.ptr();
 
-					WorkerThreadPool::GroupID group_task = WorkerThreadPool::get_singleton()->add_template_group_task(this, &EditorFileSystem::_reimport_thread, &data, i - from + 1, -1, false, vformat(TTR("Import resources of type: %s"), reimport_files[from].importer));
+					WorkerThreadPool::GroupID group_task = WorkerThreadPool::get_singleton()->add_template_group_task(this, &EditorFileSystem::_reimport_thread, &tdata, i - from + 1, -1, false, vformat(TTR("Import resources of type: %s"), reimport_files[from].importer));
 					int current_index = from - 1;
 					do {
-						if (current_index < data.max_index) {
-							current_index = data.max_index;
+						if (current_index < tdata.max_index) {
+							current_index = tdata.max_index;
 							pr.step(reimport_files[current_index].path.get_file(), current_index);
 						}
 						OS::get_singleton()->delay_usec(1);
@@ -2163,20 +2193,25 @@ void EditorFileSystem::reimport_files(const Vector<String> &p_files) {
 		}
 	}
 
-	//reimport groups
+	// Reimport groups.
+
+	from = reimport_files.size();
 
 	if (groups_to_reimport.size()) {
 		HashMap<String, Vector<String>> group_files;
 		_find_group_files(filesystem, group_files, groups_to_reimport);
 		for (const KeyValue<String, Vector<String>> &E : group_files) {
+			pr.step(E.key.get_file(), from++);
 			Error err = _reimport_group(E.key, E.value);
+			reloads.push_back(E.key);
+			reloads.append_array(E.value);
 			if (err == OK) {
 				_reimport_file(E.key);
 			}
 		}
 	}
 
-	ResourceUID::get_singleton()->update_cache(); //after reimporting, update the cache
+	ResourceUID::get_singleton()->update_cache(); // After reimporting, update the cache.
 
 	_save_filesystem_cache();
 	importing = false;
@@ -2184,7 +2219,7 @@ void EditorFileSystem::reimport_files(const Vector<String> &p_files) {
 		emit_signal(SNAME("filesystem_changed"));
 	}
 
-	emit_signal(SNAME("resources_reimported"), p_files);
+	emit_signal(SNAME("resources_reimported"), reloads);
 }
 
 Error EditorFileSystem::_resource_import(const String &p_path) {
@@ -2203,12 +2238,12 @@ bool EditorFileSystem::_should_skip_directory(const String &p_path) {
 		return true;
 	}
 
-	if (FileAccess::exists(p_path.plus_file("project.godot"))) {
+	if (FileAccess::exists(p_path.path_join("project.godot"))) {
 		// skip if another project inside this
 		return true;
 	}
 
-	if (FileAccess::exists(p_path.plus_file(".gdignore"))) {
+	if (FileAccess::exists(p_path.path_join(".gdignore"))) {
 		// skip if a `.gdignore` file is inside this
 		return true;
 	}
@@ -2269,7 +2304,7 @@ void EditorFileSystem::move_group_file(const String &p_path, const String &p_new
 
 ResourceUID::ID EditorFileSystem::_resource_saver_get_resource_id_for_path(const String &p_path, bool p_generate) {
 	if (!p_path.is_resource_file() || p_path.begins_with(ProjectSettings::get_singleton()->get_project_data_path())) {
-		//saved externally (configuration file) or internal file, do not assign an ID.
+		// Saved externally (configuration file) or internal file, do not assign an ID.
 		return ResourceUID::INVALID_ID;
 	}
 
@@ -2277,15 +2312,21 @@ ResourceUID::ID EditorFileSystem::_resource_saver_get_resource_id_for_path(const
 	int cpos = -1;
 
 	if (!singleton->_find_file(p_path, &fs, cpos)) {
+		// Fallback to ResourceLoader if filesystem cache fails (can happen during scanning etc.).
+		ResourceUID::ID fallback = ResourceLoader::get_resource_uid(p_path);
+		if (fallback != ResourceUID::INVALID_ID) {
+			return fallback;
+		}
+
 		if (p_generate) {
-			return ResourceUID::get_singleton()->create_id(); //just create a new one, we will be notified of save anyway and fetch the right UUID at that time, to keep things simple.
+			return ResourceUID::get_singleton()->create_id(); // Just create a new one, we will be notified of save anyway and fetch the right UUID at that time, to keep things simple.
 		} else {
 			return ResourceUID::INVALID_ID;
 		}
 	} else if (fs->files[cpos]->uid != ResourceUID::INVALID_ID) {
 		return fs->files[cpos]->uid;
 	} else if (p_generate) {
-		return ResourceUID::get_singleton()->create_id(); //just create a new one, we will be notified of save anyway and fetch the right UUID at that time, to keep things simple.
+		return ResourceUID::get_singleton()->create_id(); // Just create a new one, we will be notified of save anyway and fetch the right UUID at that time, to keep things simple.
 	} else {
 		return ResourceUID::INVALID_ID;
 	}
@@ -2294,7 +2335,7 @@ ResourceUID::ID EditorFileSystem::_resource_saver_get_resource_id_for_path(const
 static void _scan_extensions_dir(EditorFileSystemDirectory *d, HashSet<String> &extensions) {
 	int fc = d->get_file_count();
 	for (int i = 0; i < fc; i++) {
-		if (d->get_file_type(i) == SNAME("NativeExtension")) {
+		if (d->get_file_type(i) == SNAME("GDExtension")) {
 			extensions.insert(d->get_file_path(i));
 		}
 	}
@@ -2315,19 +2356,19 @@ bool EditorFileSystem::_scan_extensions() {
 	Vector<String> extensions_removed;
 
 	for (const String &E : extensions) {
-		if (!NativeExtensionManager::get_singleton()->is_extension_loaded(E)) {
+		if (!GDExtensionManager::get_singleton()->is_extension_loaded(E)) {
 			extensions_added.push_back(E);
 		}
 	}
 
-	Vector<String> loaded_extensions = NativeExtensionManager::get_singleton()->get_loaded_extensions();
+	Vector<String> loaded_extensions = GDExtensionManager::get_singleton()->get_loaded_extensions();
 	for (int i = 0; i < loaded_extensions.size(); i++) {
 		if (!extensions.has(loaded_extensions[i])) {
 			extensions_removed.push_back(loaded_extensions[i]);
 		}
 	}
 
-	String extension_list_config_file = NativeExtension::get_extension_list_config_file();
+	String extension_list_config_file = GDExtension::get_extension_list_config_file();
 	if (extensions.size()) {
 		if (extensions_added.size() || extensions_removed.size()) { //extensions were added or removed
 			Ref<FileAccess> f = FileAccess::open(extension_list_config_file, FileAccess::WRITE);
@@ -2344,18 +2385,18 @@ bool EditorFileSystem::_scan_extensions() {
 
 	bool needs_restart = false;
 	for (int i = 0; i < extensions_added.size(); i++) {
-		NativeExtensionManager::LoadStatus st = NativeExtensionManager::get_singleton()->load_extension(extensions_added[i]);
-		if (st == NativeExtensionManager::LOAD_STATUS_FAILED) {
+		GDExtensionManager::LoadStatus st = GDExtensionManager::get_singleton()->load_extension(extensions_added[i]);
+		if (st == GDExtensionManager::LOAD_STATUS_FAILED) {
 			EditorNode::get_singleton()->add_io_error("Error loading extension: " + extensions_added[i]);
-		} else if (st == NativeExtensionManager::LOAD_STATUS_NEEDS_RESTART) {
+		} else if (st == GDExtensionManager::LOAD_STATUS_NEEDS_RESTART) {
 			needs_restart = true;
 		}
 	}
 	for (int i = 0; i < extensions_removed.size(); i++) {
-		NativeExtensionManager::LoadStatus st = NativeExtensionManager::get_singleton()->unload_extension(extensions_removed[i]);
-		if (st == NativeExtensionManager::LOAD_STATUS_FAILED) {
+		GDExtensionManager::LoadStatus st = GDExtensionManager::get_singleton()->unload_extension(extensions_removed[i]);
+		if (st == GDExtensionManager::LOAD_STATUS_FAILED) {
 			EditorNode::get_singleton()->add_io_error("Error removing extension: " + extensions_added[i]);
-		} else if (st == NativeExtensionManager::LOAD_STATUS_NEEDS_RESTART) {
+		} else if (st == GDExtensionManager::LOAD_STATUS_NEEDS_RESTART) {
 			needs_restart = true;
 		}
 	}
@@ -2392,7 +2433,7 @@ void EditorFileSystem::_update_extensions() {
 		valid_extensions.insert(E);
 	}
 
-	const Vector<String> textfile_ext = ((String)(EditorSettings::get_singleton()->get("docks/filesystem/textfile_extensions"))).split(",", false);
+	const Vector<String> textfile_ext = ((String)(EDITOR_GET("docks/filesystem/textfile_extensions"))).split(",", false);
 	for (const String &E : textfile_ext) {
 		if (valid_extensions.has(E)) {
 			continue;
@@ -2432,7 +2473,7 @@ EditorFileSystem::EditorFileSystem() {
 
 	scan_total = 0;
 	update_script_classes_queued.clear();
-	ResourceUID::get_singleton()->clear(); //will be updated on scan
+	MessageQueue::get_singleton()->push_callable(callable_mp(ResourceUID::get_singleton(), &ResourceUID::clear)); // Will be updated on scan.
 	ResourceSaver::set_get_resource_id_for_path(_resource_saver_get_resource_id_for_path);
 }
 

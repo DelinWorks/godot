@@ -64,6 +64,19 @@ TEST_CASE("[Dictionary] Assignment using bracket notation ([])") {
 	map["World!"] = 4;
 	CHECK(int(map["World!"]) == 4);
 
+	map[StringName("HelloName")] = 6;
+	CHECK(int(map[StringName("HelloName")]) == 6);
+	// Check that StringName key is converted to String.
+	CHECK(int(map.find_key(6).get_type()) == Variant::STRING);
+	map[StringName("HelloName")] = 7;
+	CHECK(int(map[StringName("HelloName")]) == 7);
+
+	// Test String and StringName are equivalent.
+	map[StringName("Hello")] = 8;
+	CHECK(int(map["Hello"]) == 8);
+	map["Hello"] = 9;
+	CHECK(int(map[StringName("Hello")]) == 9);
+
 	// Test non-string keys, since keys can be of any Variant type.
 	map[12345] = -5;
 	CHECK(int(map[12345]) == -5);
@@ -498,6 +511,24 @@ TEST_CASE("[Dictionary] Recursive self comparison") {
 	// Break the recursivity otherwise Dictionary teardown will leak memory
 	d1.clear();
 	d2.clear();
+}
+
+TEST_CASE("[Dictionary] Order and find") {
+	Dictionary d;
+	d[4] = "four";
+	d[8] = "eight";
+	d[12] = "twelve";
+	d["4"] = "four";
+
+	Array keys;
+	keys.append(4);
+	keys.append(8);
+	keys.append(12);
+	keys.append("4");
+
+	CHECK_EQ(d.keys(), keys);
+	CHECK_EQ(d.find_key("four"), Variant(4));
+	CHECK_EQ(d.find_key("does not exist"), Variant());
 }
 
 } // namespace TestDictionary

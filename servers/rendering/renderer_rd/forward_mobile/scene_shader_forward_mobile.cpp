@@ -39,10 +39,6 @@ using namespace RendererSceneRenderImplementation;
 
 /* ShaderData */
 
-void SceneShaderForwardMobile::ShaderData::set_path_hint(const String &p_path) {
-	path = p_path;
-}
-
 void SceneShaderForwardMobile::ShaderData::set_code(const String &p_code) {
 	//compile
 
@@ -116,6 +112,9 @@ void SceneShaderForwardMobile::ShaderData::set_code(const String &p_code) {
 
 	actions.usage_flag_pointers["ALPHA"] = &uses_alpha;
 	actions.usage_flag_pointers["ALPHA_SCISSOR_THRESHOLD"] = &uses_alpha_clip;
+	// Use alpha clip pipeline for alpha hash/dither.
+	// This prevents sorting issues inherent to alpha blending and allows such materials to cast shadows.
+	actions.usage_flag_pointers["ALPHA_HASH_SCALE"] = &uses_alpha_clip;
 	actions.render_mode_flags["depth_prepass_alpha"] = &uses_depth_pre_pass;
 
 	// actions.usage_flag_pointers["SSS_STRENGTH"] = &uses_sss;
@@ -150,6 +149,8 @@ void SceneShaderForwardMobile::ShaderData::set_code(const String &p_code) {
 
 	depth_draw = DepthDraw(depth_drawi);
 	depth_test = DepthTest(depth_testi);
+	uses_vertex_time = gen_code.uses_vertex_time;
+	uses_fragment_time = gen_code.uses_fragment_time;
 
 #if 0
 	print_line("**compiling shader:");
@@ -158,11 +159,10 @@ void SceneShaderForwardMobile::ShaderData::set_code(const String &p_code) {
 		print_line(gen_code.defines[i]);
 	}
 
-	RBMap<String, String>::Element * el = gen_code.code.front();
+	HashMap<String, String>::Iterator el = gen_code.code.begin();
 	while (el) {
-		print_line("\n**code " + el->key() + ":\n" + el->value());
-
-		el = el->next();
+		print_line("\n**code " + el->key + ":\n" + el->value);
+		++el;
 	}
 
 	print_line("\n**uniforms:\n" + gen_code.uniforms);
@@ -332,98 +332,16 @@ void SceneShaderForwardMobile::ShaderData::set_code(const String &p_code) {
 	valid = true;
 }
 
-void SceneShaderForwardMobile::ShaderData::set_default_texture_param(const StringName &p_name, RID p_texture, int p_index) {
-	if (!p_texture.is_valid()) {
-		if (default_texture_params.has(p_name) && default_texture_params[p_name].has(p_index)) {
-			default_texture_params[p_name].erase(p_index);
-
-			if (default_texture_params[p_name].is_empty()) {
-				default_texture_params.erase(p_name);
-			}
-		}
-	} else {
-		if (!default_texture_params.has(p_name)) {
-			default_texture_params[p_name] = HashMap<int, RID>();
-		}
-		default_texture_params[p_name][p_index] = p_texture;
-	}
-}
-
-void SceneShaderForwardMobile::ShaderData::get_shader_uniform_list(List<PropertyInfo> *p_param_list) const {
-	HashMap<int, StringName> order;
-
-	for (const KeyValue<StringName, ShaderLanguage::ShaderNode::Uniform> &E : uniforms) {
-		if (E.value.scope != ShaderLanguage::ShaderNode::Uniform::SCOPE_LOCAL) {
-			continue;
-		}
-
-		if (E.value.texture_order >= 0) {
-			order[E.value.texture_order + 100000] = E.key;
-		} else {
-			order[E.value.order] = E.key;
-		}
-	}
-
-	String last_group;
-	for (const KeyValue<int, StringName> &E : order) {
-		String group = uniforms[E.value].group;
-		if (!uniforms[E.value].subgroup.is_empty()) {
-			group += "::" + uniforms[E.value].subgroup;
-		}
-
-		if (group != last_group) {
-			PropertyInfo pi;
-			pi.usage = PROPERTY_USAGE_GROUP;
-			pi.name = group;
-			p_param_list->push_back(pi);
-
-			last_group = group;
-		}
-
-		PropertyInfo pi = ShaderLanguage::uniform_to_property_info(uniforms[E.value]);
-		pi.name = E.value;
-		p_param_list->push_back(pi);
-	}
-}
-
-void SceneShaderForwardMobile::ShaderData::get_instance_param_list(List<RendererMaterialStorage::InstanceShaderParam> *p_param_list) const {
-	for (const KeyValue<StringName, ShaderLanguage::ShaderNode::Uniform> &E : uniforms) {
-		if (E.value.scope != ShaderLanguage::ShaderNode::Uniform::SCOPE_INSTANCE) {
-			continue;
-		}
-
-		RendererMaterialStorage::InstanceShaderParam p;
-		p.info = ShaderLanguage::uniform_to_property_info(E.value);
-		p.info.name = E.key; //supply name
-		p.index = E.value.instance_index;
-		p.default_value = ShaderLanguage::constant_value_to_variant(E.value.default_value, E.value.type, E.value.array_size, E.value.hint);
-		p_param_list->push_back(p);
-	}
-}
-
-bool SceneShaderForwardMobile::ShaderData::is_param_texture(const StringName &p_param) const {
-	if (!uniforms.has(p_param)) {
-		return false;
-	}
-
-	return uniforms[p_param].texture_order >= 0;
-}
-
 bool SceneShaderForwardMobile::ShaderData::is_animated() const {
-	return false;
+	return (uses_fragment_time && uses_discard) || (uses_vertex_time && uses_vertex);
 }
 
 bool SceneShaderForwardMobile::ShaderData::casts_shadows() const {
-	return false;
-}
+	bool has_read_screen_alpha = uses_screen_texture || uses_depth_texture || uses_normal_texture;
+	bool has_base_alpha = (uses_alpha && !uses_alpha_clip) || has_read_screen_alpha;
+	bool has_alpha = has_base_alpha || uses_blend_alpha;
 
-Variant SceneShaderForwardMobile::ShaderData::get_default_parameter(const StringName &p_parameter) const {
-	if (uniforms.has(p_parameter)) {
-		ShaderLanguage::ShaderNode::Uniform uniform = uniforms[p_parameter];
-		Vector<ShaderLanguage::ConstantNode::Value> default_value = uniform.default_value;
-		return ShaderLanguage::constant_value_to_variant(default_value, uniform.type, uniform.array_size, uniform.hint);
-	}
-	return Variant();
+	return !has_alpha || (uses_depth_pre_pass && !(depth_draw == DEPTH_DRAW_DISABLED || depth_test == DEPTH_TEST_DISABLED));
 }
 
 RS::ShaderNativeSourceCode SceneShaderForwardMobile::ShaderData::get_native_source_code() const {
@@ -462,7 +380,7 @@ void SceneShaderForwardMobile::MaterialData::set_next_pass(RID p_pass) {
 bool SceneShaderForwardMobile::MaterialData::update_parameters(const HashMap<StringName, Variant> &p_parameters, bool p_uniform_dirty, bool p_textures_dirty) {
 	SceneShaderForwardMobile *shader_singleton = (SceneShaderForwardMobile *)SceneShaderForwardMobile::singleton;
 
-	return update_parameters_uniform_set(p_parameters, p_uniform_dirty, p_textures_dirty, shader_data->uniforms, shader_data->ubo_offsets.ptr(), shader_data->texture_uniforms, shader_data->default_texture_params, shader_data->ubo_size, uniform_set, shader_singleton->shader.version_get_shader(shader_data->version, 0), RenderForwardMobile::MATERIAL_UNIFORM_SET, RD::BARRIER_MASK_RASTER);
+	return update_parameters_uniform_set(p_parameters, p_uniform_dirty, p_textures_dirty, shader_data->uniforms, shader_data->ubo_offsets.ptr(), shader_data->texture_uniforms, shader_data->default_texture_params, shader_data->ubo_size, uniform_set, shader_singleton->shader.version_get_shader(shader_data->version, 0), RenderForwardMobile::MATERIAL_UNIFORM_SET, true, RD::BARRIER_MASK_RASTER);
 }
 
 SceneShaderForwardMobile::MaterialData::~MaterialData() {
@@ -519,10 +437,10 @@ void SceneShaderForwardMobile::init(const String p_defines) {
 		//shader compiler
 		ShaderCompiler::DefaultIdentifierActions actions;
 
-		actions.renames["MODEL_MATRIX"] = "model_matrix";
+		actions.renames["MODEL_MATRIX"] = "read_model_matrix";
 		actions.renames["MODEL_NORMAL_MATRIX"] = "model_normal_matrix";
 		actions.renames["VIEW_MATRIX"] = "scene_data.view_matrix";
-		actions.renames["INV_VIEW_MATRIX"] = "scene_data.inv_view_matrix";
+		actions.renames["INV_VIEW_MATRIX"] = "inv_view_matrix";
 		actions.renames["PROJECTION_MATRIX"] = "projection_matrix";
 		actions.renames["INV_PROJECTION_MATRIX"] = "inv_projection_matrix";
 		actions.renames["MODELVIEW_MATRIX"] = "modelview";
@@ -595,10 +513,11 @@ void SceneShaderForwardMobile::init(const String p_defines) {
 		actions.renames["CUSTOM3"] = "custom3_attrib";
 		actions.renames["OUTPUT_IS_SRGB"] = "SHADER_IS_SRGB";
 
-		actions.renames["NODE_POSITION_WORLD"] = "model_matrix[3].xyz";
+		actions.renames["NODE_POSITION_WORLD"] = "read_model_matrix[3].xyz";
 		actions.renames["CAMERA_POSITION_WORLD"] = "scene_data.inv_view_matrix[3].xyz";
 		actions.renames["CAMERA_DIRECTION_WORLD"] = "scene_data.view_matrix[3].xyz";
-		actions.renames["NODE_POSITION_VIEW"] = "(model_matrix * scene_data.view_matrix)[3].xyz";
+		actions.renames["CAMERA_VISIBLE_LAYERS"] = "scene_data.camera_visible_layers";
+		actions.renames["NODE_POSITION_VIEW"] = "(read_model_matrix * scene_data.view_matrix)[3].xyz";
 
 		actions.renames["VIEW_INDEX"] = "ViewIndex";
 		actions.renames["VIEW_MONO_LEFT"] = "0";
@@ -654,6 +573,8 @@ void SceneShaderForwardMobile::init(const String p_defines) {
 		actions.usage_defines["FOG"] = "#define CUSTOM_FOG_USED\n";
 		actions.usage_defines["RADIANCE"] = "#define CUSTOM_RADIANCE_USED\n";
 		actions.usage_defines["IRRADIANCE"] = "#define CUSTOM_IRRADIANCE_USED\n";
+
+		actions.usage_defines["MODEL_MATRIX"] = "#define MODEL_MATRIX_USED\n";
 
 		actions.render_mode_defines["skip_vertex_transform"] = "#define SKIP_TRANSFORM_USED\n";
 		actions.render_mode_defines["world_vertex_coords"] = "#define VERTEX_WORLD_COORDS_USED\n";

@@ -96,13 +96,13 @@ class RenderingDeviceVulkan : public RenderingDevice {
 		ID_TYPE_SPLIT_DRAW_LIST,
 		ID_TYPE_COMPUTE_LIST,
 		ID_TYPE_MAX,
-		ID_BASE_SHIFT = 58 //5 bits for ID types
+		ID_BASE_SHIFT = 58 // 5 bits for ID types.
 	};
 
 	VkDevice device = VK_NULL_HANDLE;
 
-	HashMap<RID, HashSet<RID>> dependency_map; //IDs to IDs that depend on it
-	HashMap<RID, HashSet<RID>> reverse_dependency_map; //same as above, but in reverse
+	HashMap<RID, HashSet<RID>> dependency_map; // IDs to IDs that depend on it.
+	HashMap<RID, HashSet<RID>> reverse_dependency_map; // Same as above, but in reverse.
 
 	void _add_dependency(RID p_id, RID p_depends_on);
 	void _free_dependencies(RID p_id);
@@ -150,9 +150,11 @@ class RenderingDeviceVulkan : public RenderingDevice {
 		bool used_in_raster = false;
 		bool used_in_compute = false;
 
+		bool is_resolve_buffer = false;
+
 		uint32_t read_aspect_mask = 0;
 		uint32_t barrier_aspect_mask = 0;
-		bool bound = false; //bound to framebffer
+		bool bound = false; // Bound to framebffer.
 		RID owner;
 	};
 
@@ -160,7 +162,7 @@ class RenderingDeviceVulkan : public RenderingDevice {
 	uint32_t texture_upload_region_size_px = 0;
 
 	Vector<uint8_t> _texture_get_data_from_image(Texture *tex, VkImage p_image, VmaAllocation p_allocation, uint32_t p_layer, bool p_2d = false);
-	Error _texture_update(RID p_texture, uint32_t p_layer, const Vector<uint8_t> &p_data, uint32_t p_post_barrier, bool p_use_setup_queue);
+	Error _texture_update(RID p_texture, uint32_t p_layer, const Vector<uint8_t> &p_data, BitField<BarrierMask> p_post_barrier, bool p_use_setup_queue);
 
 	/*****************/
 	/**** SAMPLER ****/
@@ -214,7 +216,7 @@ class RenderingDeviceVulkan : public RenderingDevice {
 		uint32_t usage = 0;
 		VkBuffer buffer = VK_NULL_HANDLE;
 		VmaAllocation allocation = nullptr;
-		VkDescriptorBufferInfo buffer_info; //used for binding
+		VkDescriptorBufferInfo buffer_info; // Used for binding.
 		Buffer() {
 		}
 	};
@@ -224,8 +226,8 @@ class RenderingDeviceVulkan : public RenderingDevice {
 	Error _buffer_update(Buffer *p_buffer, size_t p_offset, const uint8_t *p_data, size_t p_data_size, bool p_use_draw_command_buffer = false, uint32_t p_required_align = 32);
 
 	void _full_barrier(bool p_sync_with_draw);
-	void _memory_barrier(VkPipelineStageFlags p_src_stage_mask, VkPipelineStageFlags p_dst_stage_mask, VkAccessFlags p_src_access, VkAccessFlags p_dst_sccess, bool p_sync_with_draw);
-	void _buffer_memory_barrier(VkBuffer buffer, uint64_t p_from, uint64_t p_size, VkPipelineStageFlags p_src_stage_mask, VkPipelineStageFlags p_dst_stage_mask, VkAccessFlags p_src_access, VkAccessFlags p_dst_sccess, bool p_sync_with_draw);
+	void _memory_barrier(VkPipelineStageFlags p_src_stage_mask, VkPipelineStageFlags p_dst_stage_mask, VkAccessFlags p_src_access, VkAccessFlags p_dst_access, bool p_sync_with_draw);
+	void _buffer_memory_barrier(VkBuffer buffer, uint64_t p_from, uint64_t p_size, VkPipelineStageFlags p_src_stage_mask, VkPipelineStageFlags p_dst_stage_mask, VkAccessFlags p_src_access, VkAccessFlags p_dst_access, bool p_sync_with_draw);
 
 	/*********************/
 	/**** FRAMEBUFFER ****/
@@ -256,7 +258,7 @@ class RenderingDeviceVulkan : public RenderingDevice {
 			const FramebufferPass *key_pass_ptr = p_key.passes.ptr();
 
 			for (uint32_t i = 0; i < pass_size; i++) {
-				{ //compare color attachments
+				{ // Compare color attachments.
 					uint32_t attachment_size = pass_ptr[i].color_attachments.size();
 					uint32_t key_attachment_size = key_pass_ptr[i].color_attachments.size();
 					if (attachment_size != key_attachment_size) {
@@ -271,7 +273,7 @@ class RenderingDeviceVulkan : public RenderingDevice {
 						}
 					}
 				}
-				{ //compare input attachments
+				{ // Compare input attachments.
 					uint32_t attachment_size = pass_ptr[i].input_attachments.size();
 					uint32_t key_attachment_size = key_pass_ptr[i].input_attachments.size();
 					if (attachment_size != key_attachment_size) {
@@ -286,7 +288,7 @@ class RenderingDeviceVulkan : public RenderingDevice {
 						}
 					}
 				}
-				{ //compare resolve attachments
+				{ // Compare resolve attachments.
 					uint32_t attachment_size = pass_ptr[i].resolve_attachments.size();
 					uint32_t key_attachment_size = key_pass_ptr[i].resolve_attachments.size();
 					if (attachment_size != key_attachment_size) {
@@ -301,7 +303,7 @@ class RenderingDeviceVulkan : public RenderingDevice {
 						}
 					}
 				}
-				{ //compare preserve attachments
+				{ // Compare preserve attachments.
 					uint32_t attachment_size = pass_ptr[i].preserve_attachments.size();
 					uint32_t key_attachment_size = key_pass_ptr[i].preserve_attachments.size();
 					if (attachment_size != key_attachment_size) {
@@ -343,7 +345,7 @@ class RenderingDeviceVulkan : public RenderingDevice {
 				}
 			}
 
-			return false; //equal
+			return false; // Equal.
 		}
 	};
 
@@ -353,9 +355,9 @@ class RenderingDeviceVulkan : public RenderingDevice {
 	RBMap<FramebufferFormatKey, FramebufferFormatID> framebuffer_format_cache;
 	struct FramebufferFormat {
 		const RBMap<FramebufferFormatKey, FramebufferFormatID>::Element *E;
-		VkRenderPass render_pass = VK_NULL_HANDLE; //here for constructing shaders, never used, see section (7.2. Render Pass Compatibility from Vulkan spec)
+		VkRenderPass render_pass = VK_NULL_HANDLE; // Here for constructing shaders, never used, see section (7.2. Render Pass Compatibility from Vulkan spec).
 		Vector<TextureSamples> pass_samples;
-		uint32_t view_count = 1; // number of views
+		uint32_t view_count = 1; // Number of views.
 	};
 
 	HashMap<FramebufferFormatID, FramebufferFormat> framebuffer_formats;
@@ -397,7 +399,7 @@ class RenderingDeviceVulkan : public RenderingDevice {
 
 		struct Version {
 			VkFramebuffer framebuffer = VK_NULL_HANDLE;
-			VkRenderPass render_pass = VK_NULL_HANDLE; //this one is owned
+			VkRenderPass render_pass = VK_NULL_HANDLE; // This one is owned.
 			uint32_t subpass_count = 1;
 		};
 
@@ -454,7 +456,7 @@ class RenderingDeviceVulkan : public RenderingDevice {
 						return false;
 					}
 				}
-				return true; //they are equal
+				return true; // They are equal.
 			}
 		}
 
@@ -499,14 +501,14 @@ class RenderingDeviceVulkan : public RenderingDevice {
 		int vertex_count = 0;
 		uint32_t max_instances_allowed = 0;
 
-		Vector<VkBuffer> buffers; //not owned, just referenced
+		Vector<VkBuffer> buffers; // Not owned, just referenced.
 		Vector<VkDeviceSize> offsets;
 	};
 
 	RID_Owner<VertexArray, true> vertex_array_owner;
 
 	struct IndexBuffer : public Buffer {
-		uint32_t max_index = 0; //used for validation
+		uint32_t max_index = 0; // Used for validation.
 		uint32_t index_count = 0;
 		VkIndexType index_type = VK_INDEX_TYPE_NONE_NV;
 		bool supports_restart_indices = false;
@@ -515,8 +517,8 @@ class RenderingDeviceVulkan : public RenderingDevice {
 	RID_Owner<IndexBuffer, true> index_buffer_owner;
 
 	struct IndexArray {
-		uint32_t max_index = 0; //remember the maximum index here too, for validation
-		VkBuffer buffer; //not owned, inherited from index buffer
+		uint32_t max_index = 0; // Remember the maximum index here too, for validation.
+		VkBuffer buffer; // Not owned, inherited from index buffer.
 		uint32_t offset = 0;
 		uint32_t indices = 0;
 		VkIndexType index_type = VK_INDEX_TYPE_NONE_NV;
@@ -541,16 +543,12 @@ class RenderingDeviceVulkan : public RenderingDevice {
 	// As a result, we need to figure out quickly when something is no longer "compatible".
 	// in order to avoid costly rebinds.
 
-	enum {
-		MAX_UNIFORM_SETS = 16
-	};
-
 	struct UniformInfo {
 		UniformType type = UniformType::UNIFORM_TYPE_MAX;
 		bool writable = false;
 		int binding = 0;
 		uint32_t stages = 0;
-		int length = 0; //size of arrays (in total elements), or ubos (in bytes * total elements)
+		int length = 0; // Size of arrays (in total elements), or ubos (in bytes * total elements).
 
 		bool operator!=(const UniformInfo &p_info) const {
 			return (binding != p_info.binding || type != p_info.type || writable != p_info.writable || stages != p_info.stages || length != p_info.length);
@@ -622,12 +620,12 @@ class RenderingDeviceVulkan : public RenderingDevice {
 			VkDescriptorSetLayout descriptor_set_layout = VK_NULL_HANDLE;
 		};
 
-		uint32_t vertex_input_mask = 0; //inputs used, this is mostly for validation
+		uint32_t vertex_input_mask = 0; // Inputs used, this is mostly for validation.
 		uint32_t fragment_output_mask = 0;
 
 		struct PushConstant {
-			uint32_t push_constant_size = 0;
-			uint32_t push_constants_vk_stage = 0;
+			uint32_t size = 0;
+			uint32_t vk_stages_mask = 0;
 		};
 
 		PushConstant push_constant;
@@ -645,7 +643,7 @@ class RenderingDeviceVulkan : public RenderingDevice {
 		Vector<VkPipelineShaderStageCreateInfo> pipeline_stages;
 		Vector<SpecializationConstant> specialization_constants;
 		VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
-		String name; //used for debug
+		String name; // Used for debug.
 	};
 
 	String _shader_uniform_debug(RID p_shader, int p_set = -1);
@@ -717,7 +715,7 @@ class RenderingDeviceVulkan : public RenderingDevice {
 	RID_Owner<Buffer, true> uniform_buffer_owner;
 	RID_Owner<Buffer, true> storage_buffer_owner;
 
-	//texture buffer needs a view
+	// Texture buffer needs a view.
 	struct TextureBuffer {
 		Buffer buffer;
 		VkBufferView view = VK_NULL_HANDLE;
@@ -740,15 +738,15 @@ class RenderingDeviceVulkan : public RenderingDevice {
 		DescriptorPool *pool = nullptr;
 		DescriptorPoolKey pool_key;
 		VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
-		//VkPipelineLayout pipeline_layout; //not owned, inherited from shader
+		//VkPipelineLayout pipeline_layout; // Not owned, inherited from shader.
 		struct AttachableTexture {
 			uint32_t bind;
 			RID texture;
 		};
 
-		LocalVector<AttachableTexture> attachable_textures; //used for validation
-		Vector<Texture *> mutable_sampled_textures; //used for layout change
-		Vector<Texture *> mutable_storage_textures; //used for layout change
+		LocalVector<AttachableTexture> attachable_textures; // Used for validation.
+		Vector<Texture *> mutable_sampled_textures; // Used for layout change.
+		Vector<Texture *> mutable_storage_textures; // Used for layout change.
 		InvalidationCallback invalidated_callback = nullptr;
 		void *invalidated_callback_userdata = nullptr;
 	};
@@ -771,7 +769,7 @@ class RenderingDeviceVulkan : public RenderingDevice {
 	// was not supplied as intended.
 
 	struct RenderPipeline {
-		//Cached values for validation
+		// Cached values for validation.
 #ifdef DEBUG_ENABLED
 		struct Validation {
 			FramebufferFormatID framebuffer_format = 0;
@@ -783,13 +781,13 @@ class RenderingDeviceVulkan : public RenderingDevice {
 			uint32_t primitive_divisor = 0;
 		} validation;
 #endif
-		//Actual pipeline
+		// Actual pipeline.
 		RID shader;
 		Vector<uint32_t> set_formats;
-		VkPipelineLayout pipeline_layout = VK_NULL_HANDLE; // not owned, needed for push constants
+		VkPipelineLayout pipeline_layout = VK_NULL_HANDLE; // Not owned, needed for push constants.
 		VkPipeline pipeline = VK_NULL_HANDLE;
 		uint32_t push_constant_size = 0;
-		uint32_t push_constant_stages = 0;
+		uint32_t push_constant_stages_mask = 0;
 	};
 
 	RID_Owner<RenderPipeline, true> render_pipeline_owner;
@@ -797,10 +795,10 @@ class RenderingDeviceVulkan : public RenderingDevice {
 	struct ComputePipeline {
 		RID shader;
 		Vector<uint32_t> set_formats;
-		VkPipelineLayout pipeline_layout = VK_NULL_HANDLE; // not owned, needed for push constants
+		VkPipelineLayout pipeline_layout = VK_NULL_HANDLE; // Not owned, needed for push constants.
 		VkPipeline pipeline = VK_NULL_HANDLE;
 		uint32_t push_constant_size = 0;
-		uint32_t push_constant_stages = 0;
+		uint32_t push_constant_stages_mask = 0;
 		uint32_t local_group_size[3] = { 0, 0, 0 };
 	};
 
@@ -823,7 +821,7 @@ class RenderingDeviceVulkan : public RenderingDevice {
 
 	struct SplitDrawListAllocator {
 		VkCommandPool command_pool = VK_NULL_HANDLE;
-		Vector<VkCommandBuffer> command_buffers; //one for each frame
+		Vector<VkCommandBuffer> command_buffers; // One for each frame.
 	};
 
 	Vector<SplitDrawListAllocator> split_draw_list_allocators;
@@ -903,11 +901,11 @@ class RenderingDeviceVulkan : public RenderingDevice {
 	bool draw_list_unbind_color_textures = false;
 	bool draw_list_unbind_depth_textures = false;
 
-	void _draw_list_insert_clear_region(DrawList *draw_list, Framebuffer *framebuffer, Point2i viewport_offset, Point2i viewport_size, bool p_clear_color, const Vector<Color> &p_clear_colors, bool p_clear_depth, float p_depth, uint32_t p_stencil);
+	void _draw_list_insert_clear_region(DrawList *p_draw_list, Framebuffer *p_framebuffer, Point2i p_viewport_offset, Point2i p_viewport_size, bool p_clear_color, const Vector<Color> &p_clear_colors, bool p_clear_depth, float p_depth, uint32_t p_stencil);
 	Error _draw_list_setup_framebuffer(Framebuffer *p_framebuffer, InitialAction p_initial_color_action, FinalAction p_final_color_action, InitialAction p_initial_depth_action, FinalAction p_final_depth_action, VkFramebuffer *r_framebuffer, VkRenderPass *r_render_pass, uint32_t *r_subpass_count);
 	Error _draw_list_render_pass_begin(Framebuffer *framebuffer, InitialAction p_initial_color_action, FinalAction p_final_color_action, InitialAction p_initial_depth_action, FinalAction p_final_depth_action, const Vector<Color> &p_clear_colors, float p_clear_depth, uint32_t p_clear_stencil, Point2i viewport_offset, Point2i viewport_size, VkFramebuffer vkframebuffer, VkRenderPass render_pass, VkCommandBuffer command_buffer, VkSubpassContents subpass_contents, const Vector<RID> &p_storage_textures);
 	_FORCE_INLINE_ DrawList *_get_draw_list_ptr(DrawListID p_id);
-	Buffer *_get_buffer_from_owner(RID p_buffer, VkPipelineStageFlags &dst_stage_mask, VkAccessFlags &dst_access, uint32_t p_post_barrier);
+	Buffer *_get_buffer_from_owner(RID p_buffer, VkPipelineStageFlags &dst_stage_mask, VkAccessFlags &dst_access, BitField<BarrierMask> p_post_barrier);
 	Error _draw_list_allocate(const Rect2i &p_viewport, uint32_t p_splits, uint32_t p_subpass);
 	void _draw_list_free(Rect2i *r_last_viewport = nullptr);
 
@@ -975,7 +973,7 @@ class RenderingDeviceVulkan : public RenderingDevice {
 	// when the frame is cycled.
 
 	struct Frame {
-		//list in usage order, from last to free to first to free
+		// List in usage order, from last to free to first to free.
 		List<Buffer> buffers_to_dispose_of;
 		List<Texture> textures_to_dispose_of;
 		List<Framebuffer> framebuffers_to_dispose_of;
@@ -987,8 +985,8 @@ class RenderingDeviceVulkan : public RenderingDevice {
 		List<ComputePipeline> compute_pipelines_to_dispose_of;
 
 		VkCommandPool command_pool = VK_NULL_HANDLE;
-		VkCommandBuffer setup_command_buffer = VK_NULL_HANDLE; //used at the beginning of every frame for set-up
-		VkCommandBuffer draw_command_buffer = VK_NULL_HANDLE; //used at the beginning of every frame for set-up
+		VkCommandBuffer setup_command_buffer = VK_NULL_HANDLE; // Used at the beginning of every frame for set-up.
+		VkCommandBuffer draw_command_buffer = VK_NULL_HANDLE; // Used at the beginning of every frame for set-up.
 
 		struct Timestamp {
 			String description;
@@ -1009,9 +1007,9 @@ class RenderingDeviceVulkan : public RenderingDevice {
 
 	uint32_t max_timestamp_query_elements = 0;
 
-	TightLocalVector<Frame> frames; //frames available, for main device they are cycled (usually 3), for local devices only 1
-	int frame = 0; //current frame
-	int frame_count = 0; //total amount of frames
+	TightLocalVector<Frame> frames; // Frames available, for main device they are cycled (usually 3), for local devices only 1.
+	int frame = 0; // Current frame.
+	int frame_count = 0; // Total amount of frames.
 	uint64_t frames_drawn = 0;
 	RID local_device;
 	bool local_device_processing = false;
@@ -1038,23 +1036,29 @@ class RenderingDeviceVulkan : public RenderingDevice {
 	void _finalize_command_bufers();
 	void _begin_frame();
 
+#ifdef DEV_ENABLED
+	HashMap<RID, String> resource_names;
+#endif
+
+	VkSampleCountFlagBits _ensure_supported_sample_count(TextureSamples p_requested_sample_count) const;
+
 public:
 	virtual RID texture_create(const TextureFormat &p_format, const TextureView &p_view, const Vector<Vector<uint8_t>> &p_data = Vector<Vector<uint8_t>>());
 	virtual RID texture_create_shared(const TextureView &p_view, RID p_with_texture);
 	virtual RID texture_create_from_extension(TextureType p_type, DataFormat p_format, TextureSamples p_samples, uint64_t p_flags, uint64_t p_image, uint64_t p_width, uint64_t p_height, uint64_t p_depth, uint64_t p_layers);
 
 	virtual RID texture_create_shared_from_slice(const TextureView &p_view, RID p_with_texture, uint32_t p_layer, uint32_t p_mipmap, uint32_t p_mipmaps = 1, TextureSliceType p_slice_type = TEXTURE_SLICE_2D);
-	virtual Error texture_update(RID p_texture, uint32_t p_layer, const Vector<uint8_t> &p_data, uint32_t p_post_barrier = BARRIER_MASK_ALL);
+	virtual Error texture_update(RID p_texture, uint32_t p_layer, const Vector<uint8_t> &p_data, BitField<BarrierMask> p_post_barrier = BARRIER_MASK_ALL_BARRIERS);
 	virtual Vector<uint8_t> texture_get_data(RID p_texture, uint32_t p_layer);
 
-	virtual bool texture_is_format_supported_for_usage(DataFormat p_format, uint32_t p_usage) const;
+	virtual bool texture_is_format_supported_for_usage(DataFormat p_format, BitField<RenderingDevice::TextureUsageBits> p_usage) const;
 	virtual bool texture_is_shared(RID p_texture);
 	virtual bool texture_is_valid(RID p_texture);
 	virtual Size2i texture_size(RID p_texture);
 
-	virtual Error texture_copy(RID p_from_texture, RID p_to_texture, const Vector3 &p_from, const Vector3 &p_to, const Vector3 &p_size, uint32_t p_src_mipmap, uint32_t p_dst_mipmap, uint32_t p_src_layer, uint32_t p_dst_layer, uint32_t p_post_barrier = BARRIER_MASK_ALL);
-	virtual Error texture_clear(RID p_texture, const Color &p_color, uint32_t p_base_mipmap, uint32_t p_mipmaps, uint32_t p_base_layer, uint32_t p_layers, uint32_t p_post_barrier = BARRIER_MASK_ALL);
-	virtual Error texture_resolve_multisample(RID p_from_texture, RID p_to_texture, uint32_t p_post_barrier = BARRIER_MASK_ALL);
+	virtual Error texture_copy(RID p_from_texture, RID p_to_texture, const Vector3 &p_from, const Vector3 &p_to, const Vector3 &p_size, uint32_t p_src_mipmap, uint32_t p_dst_mipmap, uint32_t p_src_layer, uint32_t p_dst_layer, BitField<BarrierMask> p_post_barrier = BARRIER_MASK_ALL_BARRIERS);
+	virtual Error texture_clear(RID p_texture, const Color &p_color, uint32_t p_base_mipmap, uint32_t p_mipmaps, uint32_t p_base_layer, uint32_t p_layers, BitField<BarrierMask> p_post_barrier = BARRIER_MASK_ALL_BARRIERS);
+	virtual Error texture_resolve_multisample(RID p_from_texture, RID p_to_texture, BitField<BarrierMask> p_post_barrier = BARRIER_MASK_ALL_BARRIERS);
 
 	/*********************/
 	/**** FRAMEBUFFER ****/
@@ -1085,9 +1089,9 @@ public:
 
 	virtual RID vertex_buffer_create(uint32_t p_size_bytes, const Vector<uint8_t> &p_data = Vector<uint8_t>(), bool p_use_as_storage = false);
 
-	// Internally reference counted, this ID is warranted to be unique for the same description, but needs to be freed as many times as it was allocated
+	// Internally reference counted, this ID is warranted to be unique for the same description, but needs to be freed as many times as it was allocated.
 	virtual VertexFormatID vertex_format_create(const Vector<VertexAttribute> &p_vertex_formats);
-	virtual RID vertex_array_create(uint32_t p_vertex_count, VertexFormatID p_vertex_format, const Vector<RID> &p_src_buffers);
+	virtual RID vertex_array_create(uint32_t p_vertex_count, VertexFormatID p_vertex_format, const Vector<RID> &p_src_buffers, const Vector<uint64_t> &p_offsets = Vector<uint64_t>());
 
 	virtual RID index_buffer_create(uint32_t p_size_indices, IndexBufferFormat p_format, const Vector<uint8_t> &p_data = Vector<uint8_t>(), bool p_use_restart_indices = false);
 
@@ -1109,22 +1113,22 @@ public:
 	/*****************/
 
 	virtual RID uniform_buffer_create(uint32_t p_size_bytes, const Vector<uint8_t> &p_data = Vector<uint8_t>());
-	virtual RID storage_buffer_create(uint32_t p_size_bytes, const Vector<uint8_t> &p_data = Vector<uint8_t>(), uint32_t p_usage = 0);
+	virtual RID storage_buffer_create(uint32_t p_size_bytes, const Vector<uint8_t> &p_data = Vector<uint8_t>(), BitField<StorageBufferUsage> p_usage = 0);
 	virtual RID texture_buffer_create(uint32_t p_size_elements, DataFormat p_format, const Vector<uint8_t> &p_data = Vector<uint8_t>());
 
 	virtual RID uniform_set_create(const Vector<Uniform> &p_uniforms, RID p_shader, uint32_t p_shader_set);
 	virtual bool uniform_set_is_valid(RID p_uniform_set);
 	virtual void uniform_set_set_invalidation_callback(RID p_uniform_set, InvalidationCallback p_callback, void *p_userdata);
 
-	virtual Error buffer_update(RID p_buffer, uint32_t p_offset, uint32_t p_size, const void *p_data, uint32_t p_post_barrier = BARRIER_MASK_ALL); //works for any buffer
-	virtual Error buffer_clear(RID p_buffer, uint32_t p_offset, uint32_t p_size, uint32_t p_post_barrier = BARRIER_MASK_ALL);
+	virtual Error buffer_update(RID p_buffer, uint32_t p_offset, uint32_t p_size, const void *p_data, BitField<BarrierMask> p_post_barrier = BARRIER_MASK_ALL_BARRIERS); // Works for any buffer.
+	virtual Error buffer_clear(RID p_buffer, uint32_t p_offset, uint32_t p_size, BitField<BarrierMask> p_post_barrier = BARRIER_MASK_ALL_BARRIERS);
 	virtual Vector<uint8_t> buffer_get_data(RID p_buffer);
 
 	/*************************/
 	/**** RENDER PIPELINE ****/
 	/*************************/
 
-	virtual RID render_pipeline_create(RID p_shader, FramebufferFormatID p_framebuffer_format, VertexFormatID p_vertex_format, RenderPrimitive p_render_primitive, const PipelineRasterizationState &p_rasterization_state, const PipelineMultisampleState &p_multisample_state, const PipelineDepthStencilState &p_depth_stencil_state, const PipelineColorBlendState &p_blend_state, int p_dynamic_state_flags = 0, uint32_t p_for_render_pass = 0, const Vector<PipelineSpecializationConstant> &p_specialization_constants = Vector<PipelineSpecializationConstant>());
+	virtual RID render_pipeline_create(RID p_shader, FramebufferFormatID p_framebuffer_format, VertexFormatID p_vertex_format, RenderPrimitive p_render_primitive, const PipelineRasterizationState &p_rasterization_state, const PipelineMultisampleState &p_multisample_state, const PipelineDepthStencilState &p_depth_stencil_state, const PipelineColorBlendState &p_blend_state, BitField<PipelineDynamicStateFlags> p_dynamic_state_flags = 0, uint32_t p_for_render_pass = 0, const Vector<PipelineSpecializationConstant> &p_specialization_constants = Vector<PipelineSpecializationConstant>());
 	virtual bool render_pipeline_is_valid(RID p_pipeline);
 
 	/**************************/
@@ -1151,6 +1155,7 @@ public:
 	virtual DrawListID draw_list_begin(RID p_framebuffer, InitialAction p_initial_color_action, FinalAction p_final_color_action, InitialAction p_initial_depth_action, FinalAction p_final_depth_action, const Vector<Color> &p_clear_color_values = Vector<Color>(), float p_clear_depth = 1.0, uint32_t p_clear_stencil = 0, const Rect2 &p_region = Rect2(), const Vector<RID> &p_storage_textures = Vector<RID>());
 	virtual Error draw_list_begin_split(RID p_framebuffer, uint32_t p_splits, DrawListID *r_split_ids, InitialAction p_initial_color_action, FinalAction p_final_color_action, InitialAction p_initial_depth_action, FinalAction p_final_depth_action, const Vector<Color> &p_clear_color_values = Vector<Color>(), float p_clear_depth = 1.0, uint32_t p_clear_stencil = 0, const Rect2 &p_region = Rect2(), const Vector<RID> &p_storage_textures = Vector<RID>());
 
+	virtual void draw_list_set_blend_constants(DrawListID p_list, const Color &p_color);
 	virtual void draw_list_bind_render_pipeline(DrawListID p_list, RID p_render_pipeline);
 	virtual void draw_list_bind_uniform_set(DrawListID p_list, RID p_uniform_set, uint32_t p_index);
 	virtual void draw_list_bind_vertex_array(DrawListID p_list, RID p_vertex_array);
@@ -1167,7 +1172,7 @@ public:
 	virtual DrawListID draw_list_switch_to_next_pass();
 	virtual Error draw_list_switch_to_next_pass_split(uint32_t p_splits, DrawListID *r_split_ids);
 
-	virtual void draw_list_end(uint32_t p_post_barrier = BARRIER_MASK_ALL);
+	virtual void draw_list_end(BitField<BarrierMask> p_post_barrier = BARRIER_MASK_ALL_BARRIERS);
 
 	/***********************/
 	/**** COMPUTE LISTS ****/
@@ -1182,9 +1187,9 @@ public:
 	virtual void compute_list_dispatch(ComputeListID p_list, uint32_t p_x_groups, uint32_t p_y_groups, uint32_t p_z_groups);
 	virtual void compute_list_dispatch_threads(ComputeListID p_list, uint32_t p_x_threads, uint32_t p_y_threads, uint32_t p_z_threads);
 	virtual void compute_list_dispatch_indirect(ComputeListID p_list, RID p_buffer, uint32_t p_offset);
-	virtual void compute_list_end(uint32_t p_post_barrier = BARRIER_MASK_ALL);
+	virtual void compute_list_end(BitField<BarrierMask> p_post_barrier = BARRIER_MASK_ALL_BARRIERS);
 
-	virtual void barrier(uint32_t p_from = BARRIER_MASK_ALL, uint32_t p_to = BARRIER_MASK_ALL);
+	virtual void barrier(BitField<BarrierMask> p_from = BARRIER_MASK_ALL_BARRIERS, BitField<BarrierMask> p_to = BARRIER_MASK_ALL_BARRIERS);
 	virtual void full_barrier();
 
 	/**************/
@@ -1214,10 +1219,10 @@ public:
 	void initialize(VulkanContext *p_context, bool p_local_device = false);
 	void finalize();
 
-	virtual void swap_buffers(); //for main device
+	virtual void swap_buffers(); // For main device.
 
-	virtual void submit(); //for local device
-	virtual void sync(); //for local device
+	virtual void submit(); // For local device.
+	virtual void sync(); // For local device.
 
 	virtual uint32_t get_frame_delay() const;
 

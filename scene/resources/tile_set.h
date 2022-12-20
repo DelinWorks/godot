@@ -36,10 +36,10 @@
 #include "core/templates/local_vector.h"
 #include "core/templates/rb_set.h"
 #include "scene/2d/light_occluder_2d.h"
-#include "scene/2d/navigation_region_2d.h"
 #include "scene/main/canvas_item.h"
 #include "scene/resources/concave_polygon_shape_2d.h"
 #include "scene/resources/convex_polygon_shape_2d.h"
+#include "scene/resources/navigation_polygon.h"
 #include "scene/resources/packed_scene.h"
 #include "scene/resources/physics_material.h"
 #include "scene/resources/shape_2d.h"
@@ -117,7 +117,7 @@ union TileMapCell {
 class TileMapPattern : public Resource {
 	GDCLASS(TileMapPattern, Resource);
 
-	Vector2i size;
+	Size2i size;
 	HashMap<Vector2i, TileMapCell> pattern;
 
 	void _set_tile_data(const Vector<int> &p_data);
@@ -140,8 +140,8 @@ public:
 
 	TypedArray<Vector2i> get_used_cells() const;
 
-	Vector2i get_size() const;
-	void set_size(const Vector2i &p_size);
+	Size2i get_size() const;
+	void set_size(const Size2i &p_size);
 	bool is_empty() const;
 
 	void clear();
@@ -277,6 +277,9 @@ public:
 
 		bool operator<(const TerrainsPattern &p_terrains_pattern) const;
 		bool operator==(const TerrainsPattern &p_terrains_pattern) const;
+		bool operator!=(const TerrainsPattern &p_terrains_pattern) const {
+			return !operator==(p_terrains_pattern);
+		};
 
 		void set_terrain(int p_terrain);
 		int get_terrain() const;
@@ -295,7 +298,7 @@ protected:
 	bool _set(const StringName &p_name, const Variant &p_value);
 	bool _get(const StringName &p_name, Variant &r_ret) const;
 	void _get_property_list(List<PropertyInfo> *p_list) const;
-	virtual void _validate_property(PropertyInfo &property) const override;
+	void _validate_property(PropertyInfo &p_property) const;
 
 private:
 	// --- TileSet data ---
@@ -782,7 +785,7 @@ private:
 	bool flip_h = false;
 	bool flip_v = false;
 	bool transpose = false;
-	Vector2i tex_offset = Vector2i();
+	Vector2i tex_offset;
 	Ref<Material> material = Ref<Material>();
 	Color modulate = Color(1.0, 1.0, 1.0, 1.0);
 	int z_index = 0;

@@ -32,14 +32,17 @@
 #define TEXTURE_REGION_EDITOR_PLUGIN_H
 
 #include "canvas_item_editor_plugin.h"
+#include "editor/editor_inspector.h"
 #include "editor/editor_plugin.h"
 #include "scene/2d/sprite_2d.h"
 #include "scene/3d/sprite_3d.h"
+#include "scene/gui/dialogs.h"
 #include "scene/gui/nine_patch_rect.h"
 #include "scene/resources/style_box.h"
 #include "scene/resources/texture.h"
 
 class ViewPanner;
+class OptionButton;
 
 class TextureRegionEditor : public AcceptDialog {
 	GDCLASS(TextureRegionEditor, AcceptDialog);
@@ -68,8 +71,6 @@ class TextureRegionEditor : public AcceptDialog {
 	VScrollBar *vscroll = nullptr;
 	HScrollBar *hscroll = nullptr;
 
-	UndoRedo *undo_redo = nullptr;
-
 	Vector2 draw_ofs;
 	float draw_zoom = 0.0;
 	bool updating_scroll = false;
@@ -84,6 +85,8 @@ class TextureRegionEditor : public AcceptDialog {
 	NinePatchRect *node_ninepatch = nullptr;
 	Ref<StyleBoxTexture> obj_styleBox;
 	Ref<AtlasTexture> atlas_tex;
+
+	Ref<CanvasTexture> preview_tex;
 
 	Rect2 rect;
 	Rect2 rect_prev;

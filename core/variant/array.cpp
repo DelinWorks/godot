@@ -31,12 +31,14 @@
 #include "array.h"
 
 #include "container_type_validate.h"
+#include "core/math/math_funcs.h"
 #include "core/object/class_db.h"
 #include "core/object/script_language.h"
 #include "core/templates/hashfuncs.h"
 #include "core/templates/search_array.h"
 #include "core/templates/vector.h"
 #include "core/variant/callable.h"
+#include "core/variant/dictionary.h"
 #include "core/variant/variant.h"
 
 class ArrayPrivate {
@@ -200,16 +202,21 @@ uint32_t Array::recursive_hash(int recursion_count) const {
 }
 
 bool Array::_assign(const Array &p_array) {
+	bool can_convert = p_array._p->typed.type == Variant::NIL;
+	can_convert |= _p->typed.type == Variant::STRING && p_array._p->typed.type == Variant::STRING_NAME;
+	can_convert |= _p->typed.type == Variant::STRING_NAME && p_array._p->typed.type == Variant::STRING;
+
 	if (_p->typed.type != Variant::OBJECT && _p->typed.type == p_array._p->typed.type) {
 		//same type or untyped, just reference, should be fine
 		_ref(p_array);
 	} else if (_p->typed.type == Variant::NIL) { //from typed to untyped, must copy, but this is cheap anyway
 		_p->array = p_array._p->array;
-	} else if (p_array._p->typed.type == Variant::NIL) { //from untyped to typed, must try to check if they are all valid
+	} else if (can_convert) { //from untyped to typed, must try to check if they are all valid
 		if (_p->typed.type == Variant::OBJECT) {
 			//for objects, it needs full validation, either can be converted or fail
 			for (int i = 0; i < p_array._p->array.size(); i++) {
-				if (!_p->typed.validate(p_array._p->array[i], "assign")) {
+				const Variant &element = p_array._p->array[i];
+				if (element.get_type() != Variant::OBJECT || !_p->typed.validate_object(element, "assign")) {
 					return false;
 				}
 			}
@@ -254,16 +261,20 @@ void Array::operator=(const Array &p_array) {
 
 void Array::push_back(const Variant &p_value) {
 	ERR_FAIL_COND_MSG(_p->read_only, "Array is in read-only state.");
-	ERR_FAIL_COND(!_p->typed.validate(p_value, "push_back"));
-	_p->array.push_back(p_value);
+	Variant value = p_value;
+	ERR_FAIL_COND(!_p->typed.validate(value, "push_back"));
+	_p->array.push_back(value);
 }
 
 void Array::append_array(const Array &p_array) {
 	ERR_FAIL_COND_MSG(_p->read_only, "Array is in read-only state.");
-	for (int i = 0; i < p_array.size(); ++i) {
-		ERR_FAIL_COND(!_p->typed.validate(p_array[i], "append_array"));
+
+	Vector<Variant> validated_array = p_array._p->array;
+	for (int i = 0; i < validated_array.size(); ++i) {
+		ERR_FAIL_COND(!_p->typed.validate(validated_array.write[i], "append_array"));
 	}
-	_p->array.append_array(p_array._p->array);
+
+	_p->array.append_array(validated_array);
 }
 
 Error Array::resize(int p_new_size) {
@@ -273,20 +284,23 @@ Error Array::resize(int p_new_size) {
 
 Error Array::insert(int p_pos, const Variant &p_value) {
 	ERR_FAIL_COND_V_MSG(_p->read_only, ERR_LOCKED, "Array is in read-only state.");
-	ERR_FAIL_COND_V(!_p->typed.validate(p_value, "insert"), ERR_INVALID_PARAMETER);
-	return _p->array.insert(p_pos, p_value);
+	Variant value = p_value;
+	ERR_FAIL_COND_V(!_p->typed.validate(value, "insert"), ERR_INVALID_PARAMETER);
+	return _p->array.insert(p_pos, value);
 }
 
 void Array::fill(const Variant &p_value) {
 	ERR_FAIL_COND_MSG(_p->read_only, "Array is in read-only state.");
-	ERR_FAIL_COND(!_p->typed.validate(p_value, "fill"));
-	_p->array.fill(p_value);
+	Variant value = p_value;
+	ERR_FAIL_COND(!_p->typed.validate(value, "fill"));
+	_p->array.fill(value);
 }
 
 void Array::erase(const Variant &p_value) {
 	ERR_FAIL_COND_MSG(_p->read_only, "Array is in read-only state.");
-	ERR_FAIL_COND(!_p->typed.validate(p_value, "erase"));
-	_p->array.erase(p_value);
+	Variant value = p_value;
+	ERR_FAIL_COND(!_p->typed.validate(value, "erase"));
+	_p->array.erase(value);
 }
 
 Variant Array::front() const {
@@ -299,16 +313,40 @@ Variant Array::back() const {
 	return operator[](_p->array.size() - 1);
 }
 
+Variant Array::pick_random() const {
+	ERR_FAIL_COND_V_MSG(_p->array.size() == 0, Variant(), "Can't take value from empty array.");
+	return operator[](Math::rand() % _p->array.size());
+}
+
 int Array::find(const Variant &p_value, int p_from) const {
-	ERR_FAIL_COND_V(!_p->typed.validate(p_value, "find"), -1);
-	return _p->array.find(p_value, p_from);
+	if (_p->array.size() == 0) {
+		return -1;
+	}
+	Variant value = p_value;
+	ERR_FAIL_COND_V(!_p->typed.validate(value, "find"), -1);
+
+	int ret = -1;
+
+	if (p_from < 0 || size() == 0) {
+		return ret;
+	}
+
+	for (int i = p_from; i < size(); i++) {
+		if (StringLikeVariantComparator::compare(_p->array[i], value)) {
+			ret = i;
+			break;
+		}
+	}
+
+	return ret;
 }
 
 int Array::rfind(const Variant &p_value, int p_from) const {
 	if (_p->array.size() == 0) {
 		return -1;
 	}
-	ERR_FAIL_COND_V(!_p->typed.validate(p_value, "rfind"), -1);
+	Variant value = p_value;
+	ERR_FAIL_COND_V(!_p->typed.validate(value, "rfind"), -1);
 
 	if (p_from < 0) {
 		// Relative offset from the end
@@ -320,7 +358,7 @@ int Array::rfind(const Variant &p_value, int p_from) const {
 	}
 
 	for (int i = p_from; i >= 0; i--) {
-		if (_p->array[i] == p_value) {
+		if (StringLikeVariantComparator::compare(_p->array[i], value)) {
 			return i;
 		}
 	}
@@ -328,20 +366,16 @@ int Array::rfind(const Variant &p_value, int p_from) const {
 	return -1;
 }
 
-int Array::find_last(const Variant &p_value) const {
-	ERR_FAIL_COND_V(!_p->typed.validate(p_value, "find_last"), -1);
-	return rfind(p_value);
-}
-
 int Array::count(const Variant &p_value) const {
-	ERR_FAIL_COND_V(!_p->typed.validate(p_value, "count"), 0);
+	Variant value = p_value;
+	ERR_FAIL_COND_V(!_p->typed.validate(value, "count"), 0);
 	if (_p->array.size() == 0) {
 		return 0;
 	}
 
 	int amount = 0;
 	for (int i = 0; i < _p->array.size(); i++) {
-		if (_p->array[i] == p_value) {
+		if (StringLikeVariantComparator::compare(_p->array[i], value)) {
 			amount++;
 		}
 	}
@@ -350,9 +384,10 @@ int Array::count(const Variant &p_value) const {
 }
 
 bool Array::has(const Variant &p_value) const {
-	ERR_FAIL_COND_V(!_p->typed.validate(p_value, "use 'has'"), false);
+	Variant value = p_value;
+	ERR_FAIL_COND_V(!_p->typed.validate(value, "use 'has'"), false);
 
-	return _p->array.find(p_value, 0) != -1;
+	return find(value) != -1;
 }
 
 void Array::remove_at(int p_pos) {
@@ -362,9 +397,10 @@ void Array::remove_at(int p_pos) {
 
 void Array::set(int p_idx, const Variant &p_value) {
 	ERR_FAIL_COND_MSG(_p->read_only, "Array is in read-only state.");
-	ERR_FAIL_COND(!_p->typed.validate(p_value, "set"));
+	Variant value = p_value;
+	ERR_FAIL_COND(!_p->typed.validate(value, "set"));
 
-	operator[](p_idx) = p_value;
+	operator[](p_idx) = value;
 }
 
 const Variant &Array::get(int p_idx) const {
@@ -402,6 +438,7 @@ Array Array::recursive_duplicate(bool p_deep, int recursion_count) const {
 
 Array Array::slice(int p_begin, int p_end, int p_step, bool p_deep) const {
 	Array result;
+	result._p->typed = _p->typed;
 
 	ERR_FAIL_COND_V_MSG(p_step == 0, result, "Slice step cannot be zero.");
 
@@ -433,6 +470,7 @@ Array Array::slice(int p_begin, int p_end, int p_step, bool p_deep) const {
 Array Array::filter(const Callable &p_callable) const {
 	Array new_arr;
 	new_arr.resize(size());
+	new_arr._p->typed = _p->typed;
 	int accepted_count = 0;
 
 	const Variant *argptrs[1];
@@ -585,15 +623,17 @@ void Array::shuffle() {
 }
 
 int Array::bsearch(const Variant &p_value, bool p_before) {
-	ERR_FAIL_COND_V(!_p->typed.validate(p_value, "binary search"), -1);
+	Variant value = p_value;
+	ERR_FAIL_COND_V(!_p->typed.validate(value, "binary search"), -1);
 	SearchArray<Variant, _ArrayVariantSort> avs;
-	return avs.bisect(_p->array.ptrw(), _p->array.size(), p_value, p_before);
+	return avs.bisect(_p->array.ptrw(), _p->array.size(), value, p_before);
 }
 
 int Array::bsearch_custom(const Variant &p_value, const Callable &p_callable, bool p_before) {
-	ERR_FAIL_COND_V(!_p->typed.validate(p_value, "custom binary search"), -1);
+	Variant value = p_value;
+	ERR_FAIL_COND_V(!_p->typed.validate(value, "custom binary search"), -1);
 
-	return _p->array.bsearch_custom<CallableComparator>(p_value, p_before, p_callable);
+	return _p->array.bsearch_custom<CallableComparator>(value, p_before, p_callable);
 }
 
 void Array::reverse() {
@@ -603,8 +643,9 @@ void Array::reverse() {
 
 void Array::push_front(const Variant &p_value) {
 	ERR_FAIL_COND_MSG(_p->read_only, "Array is in read-only state.");
-	ERR_FAIL_COND(!_p->typed.validate(p_value, "push_front"));
-	_p->array.insert(0, p_value);
+	Variant value = p_value;
+	ERR_FAIL_COND(!_p->typed.validate(value, "push_front"));
+	_p->array.insert(0, value);
 }
 
 Variant Array::pop_back() {

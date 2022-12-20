@@ -374,13 +374,13 @@ String VisualShaderNodeParticleMeshEmitter::_generate_code(VisualShader::Type p_
 	if (is_output_port_connected(p_index)) {
 		switch (p_port_type) {
 			case PORT_TYPE_VECTOR_2D: {
-				code += vformat("	%s = texelFetch(%s, ivec2(__scalar_ibuff, 0), 0).xy;\n", p_output_vars[p_index], make_unique_id(p_type, p_id, p_texture_name));
+				code += vformat("		%s = texelFetch(%s, ivec2(__scalar_ibuff, 0), 0).xy;\n", p_output_vars[p_index], make_unique_id(p_type, p_id, p_texture_name));
 			} break;
 			case PORT_TYPE_VECTOR_3D: {
 				if (mode_2d) {
-					code += vformat("	%s = texelFetch(%s, ivec2(__scalar_ibuff, 0), 0).xy;\n", p_output_vars[p_index], make_unique_id(p_type, p_id, p_texture_name));
+					code += vformat("		%s = texelFetch(%s, ivec2(__scalar_ibuff, 0), 0).xy;\n", p_output_vars[p_index], make_unique_id(p_type, p_id, p_texture_name));
 				} else {
-					code += vformat("	%s = texelFetch(%s, ivec2(__scalar_ibuff, 0), 0).xyz;\n", p_output_vars[p_index], make_unique_id(p_type, p_id, p_texture_name));
+					code += vformat("		%s = texelFetch(%s, ivec2(__scalar_ibuff, 0), 0).xyz;\n", p_output_vars[p_index], make_unique_id(p_type, p_id, p_texture_name));
 				}
 			} break;
 			default:
@@ -392,25 +392,27 @@ String VisualShaderNodeParticleMeshEmitter::_generate_code(VisualShader::Type p_
 
 String VisualShaderNodeParticleMeshEmitter::generate_code(Shader::Mode p_mode, VisualShader::Type p_type, int p_id, const String *p_input_vars, const String *p_output_vars, bool p_for_preview) const {
 	String code;
-	code += "	__scalar_ibuff = int(__rand_from_seed(__seed) * 65535.0) % " + itos(position_texture->get_width()) + ";\n";
+	code += "	{\n";
+	code += "		int __scalar_ibuff = int(__rand_from_seed(__seed) * 65535.0) % " + itos(position_texture->get_width()) + ";\n";
 
 	code += _generate_code(p_type, p_id, p_output_vars, 0, "mesh_vx", VisualShaderNode::PORT_TYPE_VECTOR_3D);
 	code += _generate_code(p_type, p_id, p_output_vars, 1, "mesh_nm", VisualShaderNode::PORT_TYPE_VECTOR_3D);
 
 	if (is_output_port_connected(2) || is_output_port_connected(3)) {
-		code += vformat("	__vec4_buff = texelFetch(%s, ivec2(__scalar_ibuff, 0), 0);\n", make_unique_id(p_type, p_id, "mesh_col"));
+		code += vformat("		vec4 __vec4_buff = texelFetch(%s, ivec2(__scalar_ibuff, 0), 0);\n", make_unique_id(p_type, p_id, "mesh_col"));
 
 		if (is_output_port_connected(2)) {
-			code += "	" + p_output_vars[2] + " = __vec4_buff.rgb;\n";
+			code += "		" + p_output_vars[2] + " = __vec4_buff.rgb;\n";
 		}
 		if (is_output_port_connected(3)) {
-			code += "	" + p_output_vars[3] + " = __vec4_buff.a;\n";
+			code += "		" + p_output_vars[3] + " = __vec4_buff.a;\n";
 		}
 	}
 
 	code += _generate_code(p_type, p_id, p_output_vars, 4, "mesh_uv", VisualShaderNode::PORT_TYPE_VECTOR_2D);
 	code += _generate_code(p_type, p_id, p_output_vars, 5, "mesh_uv2", VisualShaderNode::PORT_TYPE_VECTOR_2D);
 
+	code += "	}\n";
 	return code;
 }
 
@@ -460,9 +462,9 @@ void VisualShaderNodeParticleMeshEmitter::_update_texture(const Vector<Vector2> 
 	image.instantiate();
 
 	if (p_array.size() == 0) {
-		image->create(1, 1, false, Image::Format::FORMAT_RGBF);
+		image->initialize_data(1, 1, false, Image::Format::FORMAT_RGBF);
 	} else {
-		image->create(p_array.size(), 1, false, Image::Format::FORMAT_RGBF);
+		image->initialize_data(p_array.size(), 1, false, Image::Format::FORMAT_RGBF);
 	}
 
 	for (int i = 0; i < p_array.size(); i++) {
@@ -481,9 +483,9 @@ void VisualShaderNodeParticleMeshEmitter::_update_texture(const Vector<Vector3> 
 	image.instantiate();
 
 	if (p_array.size() == 0) {
-		image->create(1, 1, false, Image::Format::FORMAT_RGBF);
+		image->initialize_data(1, 1, false, Image::Format::FORMAT_RGBF);
 	} else {
-		image->create(p_array.size(), 1, false, Image::Format::FORMAT_RGBF);
+		image->initialize_data(p_array.size(), 1, false, Image::Format::FORMAT_RGBF);
 	}
 
 	for (int i = 0; i < p_array.size(); i++) {
@@ -502,9 +504,9 @@ void VisualShaderNodeParticleMeshEmitter::_update_texture(const Vector<Color> &p
 	image.instantiate();
 
 	if (p_array.size() == 0) {
-		image->create(1, 1, false, Image::Format::FORMAT_RGBA8);
+		image->initialize_data(1, 1, false, Image::Format::FORMAT_RGBA8);
 	} else {
-		image->create(p_array.size(), 1, false, Image::Format::FORMAT_RGBA8);
+		image->initialize_data(p_array.size(), 1, false, Image::Format::FORMAT_RGBA8);
 	}
 
 	for (int i = 0; i < p_array.size(); i++) {
@@ -737,6 +739,8 @@ VisualShaderNodeParticleMeshEmitter::VisualShaderNodeParticleMeshEmitter() {
 	color_texture.instantiate();
 	uv_texture.instantiate();
 	uv2_texture.instantiate();
+
+	simple_decl = false;
 }
 
 // VisualShaderNodeParticleMultiplyByAxisAngle
@@ -879,22 +883,26 @@ bool VisualShaderNodeParticleConeVelocity::has_output_port_preview(int p_port) c
 
 String VisualShaderNodeParticleConeVelocity::generate_code(Shader::Mode p_mode, VisualShader::Type p_type, int p_id, const String *p_input_vars, const String *p_output_vars, bool p_for_preview) const {
 	String code;
-	code += "	__radians = radians(" + (p_input_vars[1].is_empty() ? (String)get_input_port_default_value(1) : p_input_vars[1]) + ");\n";
-	code += "	__scalar_buff1 = __rand_from_seed_m1_p1(__seed) * __radians;\n";
-	code += "	__scalar_buff2 = __rand_from_seed_m1_p1(__seed) * __radians;\n";
-	code += "	__vec3_buff1 = " + (p_input_vars[0].is_empty() ? "vec3" + (String)get_input_port_default_value(0) : p_input_vars[0]) + ";\n";
-	code += "	__scalar_buff1 += __vec3_buff1.z != 0.0 ? atan(__vec3_buff1.x, __vec3_buff1.z) : sign(__vec3_buff1.x) * (PI / 2.0);\n";
-	code += "	__scalar_buff2 += __vec3_buff1.z != 0.0 ? atan(__vec3_buff1.y, abs(__vec3_buff1.z)) : (__vec3_buff1.x != 0.0 ? atan(__vec3_buff1.y, abs(__vec3_buff1.x)) : sign(__vec3_buff1.y) * (PI / 2.0));\n";
-	code += "	__vec3_buff1 = vec3(sin(__scalar_buff1), 0.0, cos(__scalar_buff1));\n";
-	code += "	__vec3_buff2 = vec3(0.0, sin(__scalar_buff2), cos(__scalar_buff2));\n";
-	code += "	__vec3_buff2.z = __vec3_buff2.z / max(0.0001, sqrt(abs(__vec3_buff2.z)));\n";
-	code += "	" + p_output_vars[0] + " = normalize(vec3(__vec3_buff1.x * __vec3_buff2.z, __vec3_buff2.y, __vec3_buff1.z * __vec3_buff2.z));\n";
+	code += "	{\n";
+	code += "		float __radians = radians(" + (p_input_vars[1].is_empty() ? (String)get_input_port_default_value(1) : p_input_vars[1]) + ");\n";
+	code += "		float __scalar_buff1 = __rand_from_seed_m1_p1(__seed) * __radians;\n";
+	code += "		float __scalar_buff2 = __rand_from_seed_m1_p1(__seed) * __radians;\n";
+	code += "		vec3 __vec3_buff1 = " + (p_input_vars[0].is_empty() ? "vec3" + (String)get_input_port_default_value(0) : p_input_vars[0]) + ";\n";
+	code += "		__scalar_buff1 += __vec3_buff1.z != 0.0 ? atan(__vec3_buff1.x, __vec3_buff1.z) : sign(__vec3_buff1.x) * (PI / 2.0);\n";
+	code += "		__scalar_buff2 += __vec3_buff1.z != 0.0 ? atan(__vec3_buff1.y, abs(__vec3_buff1.z)) : (__vec3_buff1.x != 0.0 ? atan(__vec3_buff1.y, abs(__vec3_buff1.x)) : sign(__vec3_buff1.y) * (PI / 2.0));\n";
+	code += "		__vec3_buff1 = vec3(sin(__scalar_buff1), 0.0, cos(__scalar_buff1));\n";
+	code += "		vec3 __vec3_buff2 = vec3(0.0, sin(__scalar_buff2), cos(__scalar_buff2));\n";
+	code += "		__vec3_buff2.z = __vec3_buff2.z / max(0.0001, sqrt(abs(__vec3_buff2.z)));\n";
+	code += "		" + p_output_vars[0] + " = normalize(vec3(__vec3_buff1.x * __vec3_buff2.z, __vec3_buff2.y, __vec3_buff1.z * __vec3_buff2.z));\n";
+	code += "	}\n";
 	return code;
 }
 
 VisualShaderNodeParticleConeVelocity::VisualShaderNodeParticleConeVelocity() {
 	set_input_port_default_value(0, Vector3(1, 0, 0));
 	set_input_port_default_value(1, 45.0);
+
+	simple_decl = false;
 }
 
 // VisualShaderNodeParticleRandomness
@@ -1086,21 +1094,26 @@ String VisualShaderNodeParticleAccelerator::get_input_port_name(int p_port) cons
 
 String VisualShaderNodeParticleAccelerator::generate_code(Shader::Mode p_mode, VisualShader::Type p_type, int p_id, const String *p_input_vars, const String *p_output_vars, bool p_for_preview) const {
 	String code;
+	code += "	{\n";
 	switch (mode) {
 		case MODE_LINEAR:
-			code += "	" + p_output_vars[0] + " = length(VELOCITY) > 0.0 ? " + "normalize(VELOCITY) * " + (p_input_vars[0].is_empty() ? "vec3" + (String)get_input_port_default_value(0) : p_input_vars[0]) + " * mix(1.0, __rand_from_seed(__seed), " + (p_input_vars[1].is_empty() ? (String)get_input_port_default_value(1) : p_input_vars[1]) + ") : vec3(0.0);\n";
+			code += "		" + p_output_vars[0] + " = length(VELOCITY) > 0.0 ? " + "normalize(VELOCITY) * " + (p_input_vars[0].is_empty() ? "vec3" + (String)get_input_port_default_value(0) : p_input_vars[0]) + " * mix(1.0, __rand_from_seed(__seed), " + (p_input_vars[1].is_empty() ? (String)get_input_port_default_value(1) : p_input_vars[1]) + ") : vec3(0.0);\n";
 			break;
 		case MODE_RADIAL:
-			code += "	" + p_output_vars[0] + " = length(__diff) > 0.0 ? __ndiff * " + (p_input_vars[0].is_empty() ? "vec3" + (String)get_input_port_default_value(0) : p_input_vars[0]) + " * mix(1.0, __rand_from_seed(__seed), " + (p_input_vars[1].is_empty() ? (String)get_input_port_default_value(1) : p_input_vars[1]) + ") : vec3(0.0);\n";
+			code += "		vec3 __diff = TRANSFORM[3].xyz - EMISSION_TRANSFORM[3].xyz;\n";
+			code += "		vec3 __ndiff = normalize(__diff);\n\n";
+			code += "		" + p_output_vars[0] + " = length(__diff) > 0.0 ? __ndiff * " + (p_input_vars[0].is_empty() ? "vec3" + (String)get_input_port_default_value(0) : p_input_vars[0]) + " * mix(1.0, __rand_from_seed(__seed), " + (p_input_vars[1].is_empty() ? (String)get_input_port_default_value(1) : p_input_vars[1]) + ") : vec3(0.0);\n";
 			break;
 		case MODE_TANGENTIAL:
-			code += "	__vec3_buff1 = cross(__ndiff, normalize(" + (p_input_vars[2].is_empty() ? "vec3" + (String)get_input_port_default_value(2) : p_input_vars[2]) + "));\n";
-			code += "	" + p_output_vars[0] + " = length(__vec3_buff1) > 0.0 ? normalize(__vec3_buff1) * (" + (p_input_vars[0].is_empty() ? "vec3" + (String)get_input_port_default_value(0) : p_input_vars[0]) + " * mix(1.0, __rand_from_seed(__seed), " + (p_input_vars[1].is_empty() ? (String)get_input_port_default_value(1) : p_input_vars[1]) + ")) : vec3(0.0);\n";
+			code += "		vec3 __diff = TRANSFORM[3].xyz - EMISSION_TRANSFORM[3].xyz;\n";
+			code += "		vec3 __ndiff = normalize(__diff);\n\n";
+			code += "		vec3 __vec3_buff1 = cross(__ndiff, normalize(" + (p_input_vars[2].is_empty() ? "vec3" + (String)get_input_port_default_value(2) : p_input_vars[2]) + "));\n";
+			code += "		" + p_output_vars[0] + " = length(__vec3_buff1) > 0.0 ? normalize(__vec3_buff1) * (" + (p_input_vars[0].is_empty() ? "vec3" + (String)get_input_port_default_value(0) : p_input_vars[0]) + " * mix(1.0, __rand_from_seed(__seed), " + (p_input_vars[1].is_empty() ? (String)get_input_port_default_value(1) : p_input_vars[1]) + ")) : vec3(0.0);\n";
 			break;
 		default:
 			break;
 	}
-
+	code += "	}\n";
 	return code;
 }
 
@@ -1125,36 +1138,45 @@ VisualShaderNodeParticleAccelerator::VisualShaderNodeParticleAccelerator() {
 	set_input_port_default_value(0, Vector3(1, 1, 1));
 	set_input_port_default_value(1, 0.0);
 	set_input_port_default_value(2, Vector3(0, -9.8, 0));
+
+	simple_decl = false;
 }
 
 // VisualShaderNodeParticleOutput
 
 String VisualShaderNodeParticleOutput::get_caption() const {
-	if (shader_type == VisualShader::TYPE_START) {
-		return "StartOutput";
-	} else if (shader_type == VisualShader::TYPE_PROCESS) {
-		return "ProcessOutput";
-	} else if (shader_type == VisualShader::TYPE_COLLIDE) {
-		return "CollideOutput";
-	} else if (shader_type == VisualShader::TYPE_START_CUSTOM) {
-		return "CustomStartOutput";
-	} else if (shader_type == VisualShader::TYPE_PROCESS_CUSTOM) {
-		return "CustomProcessOutput";
+	switch (shader_type) {
+		case VisualShader::TYPE_START:
+			return "StartOutput";
+		case VisualShader::TYPE_PROCESS:
+			return "ProcessOutput";
+		case VisualShader::TYPE_COLLIDE:
+			return "CollideOutput";
+		case VisualShader::TYPE_START_CUSTOM:
+			return "CustomStartOutput";
+		case VisualShader::TYPE_PROCESS_CUSTOM:
+			return "CustomProcessOutput";
+		default:
+			ERR_PRINT(vformat("Unexpected shader_type %d for VisualShaderNodeParticleOutput.", shader_type));
+			return "";
 	}
-	return String();
 }
 
 int VisualShaderNodeParticleOutput::get_input_port_count() const {
-	if (shader_type == VisualShader::TYPE_START) {
-		return 8;
-	} else if (shader_type == VisualShader::TYPE_COLLIDE) {
-		return 5;
-	} else if (shader_type == VisualShader::TYPE_START_CUSTOM || shader_type == VisualShader::TYPE_PROCESS_CUSTOM) {
-		return 6;
-	} else { // TYPE_PROCESS
-		return 7;
+	switch (shader_type) {
+		case VisualShader::TYPE_START:
+			return 8;
+		case VisualShader::TYPE_PROCESS:
+			return 7;
+		case VisualShader::TYPE_COLLIDE:
+			return 5;
+		case VisualShader::TYPE_START_CUSTOM:
+		case VisualShader::TYPE_PROCESS_CUSTOM:
+			return 6;
+		default:
+			ERR_PRINT(vformat("Unexpected shader_type %d for VisualShaderNodeParticleOutput.", shader_type));
+			return 0;
 	}
-	return 0;
 }
 
 VisualShaderNodeParticleOutput::PortType VisualShaderNodeParticleOutput::get_input_port_type(int p_port) const {
@@ -1284,12 +1306,12 @@ String VisualShaderNodeParticleOutput::get_input_port_name(int p_port) const {
 
 bool VisualShaderNodeParticleOutput::is_port_separator(int p_index) const {
 	if (shader_type == VisualShader::TYPE_START || shader_type == VisualShader::TYPE_PROCESS) {
-		String name = get_input_port_name(p_index);
-		return bool(name == "Scale");
+		String port_name = get_input_port_name(p_index);
+		return bool(port_name == "Scale");
 	}
 	if (shader_type == VisualShader::TYPE_START_CUSTOM || shader_type == VisualShader::TYPE_PROCESS_CUSTOM) {
-		String name = get_input_port_name(p_index);
-		return bool(name == "Velocity");
+		String port_name = get_input_port_name(p_index);
+		return bool(port_name == "Velocity");
 	}
 	return false;
 }
@@ -1597,24 +1619,24 @@ String VisualShaderNodeParticleEmit::generate_code(Shader::Mode p_mode, VisualSh
 		flags_arr.push_back("FLAG_EMIT_CUSTOM");
 	}
 
-	String flags;
+	String flags_str;
 
 	for (int i = 0; i < flags_arr.size(); i++) {
 		if (i > 0) {
-			flags += "|";
+			flags_str += "|";
 		}
-		flags += flags_arr[i];
+		flags_str += flags_arr[i];
 	}
 
-	if (flags.is_empty()) {
-		flags = "uint(0)";
+	if (flags_str.is_empty()) {
+		flags_str = "uint(0)";
 	}
 
 	if (!default_condition) {
 		code += "	if (" + p_input_vars[0] + ") {\n";
 	}
 
-	code += tab + "emit_subparticle(" + transform + ", " + velocity + ", vec4(" + color + ", " + alpha + "), vec4(" + custom + ", " + custom_alpha + "), " + flags + ");\n";
+	code += tab + "emit_subparticle(" + transform + ", " + velocity + ", vec4(" + color + ", " + alpha + "), vec4(" + custom + ", " + custom_alpha + "), " + flags_str + ");\n";
 
 	if (!default_condition) {
 		code += "	}\n";

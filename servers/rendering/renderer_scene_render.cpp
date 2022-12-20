@@ -33,7 +33,7 @@
 /////////////////////////////////////////////////////////////////////////////
 // CameraData
 
-void RendererSceneRender::CameraData::set_camera(const Transform3D p_transform, const Projection p_projection, bool p_is_orthogonal, bool p_vaspect, const Vector2 &p_taa_jitter) {
+void RendererSceneRender::CameraData::set_camera(const Transform3D p_transform, const Projection p_projection, bool p_is_orthogonal, bool p_vaspect, const Vector2 &p_taa_jitter, const uint32_t p_visible_layers) {
 	view_count = 1;
 	is_orthogonal = p_is_orthogonal;
 	vaspect = p_vaspect;
@@ -41,6 +41,7 @@ void RendererSceneRender::CameraData::set_camera(const Transform3D p_transform, 
 	main_transform = p_transform;
 	main_projection = p_projection;
 
+	visible_layers = p_visible_layers;
 	view_offset[0] = Transform3D();
 	view_projection[0] = p_projection;
 	taa_jitter = p_taa_jitter;
@@ -49,6 +50,7 @@ void RendererSceneRender::CameraData::set_camera(const Transform3D p_transform, 
 void RendererSceneRender::CameraData::set_multiview_camera(uint32_t p_view_count, const Transform3D *p_transforms, const Projection *p_projections, bool p_is_orthogonal, bool p_vaspect) {
 	ERR_FAIL_COND_MSG(p_view_count != 2, "Incorrect view count for stereoscopic view");
 
+	visible_layers = 0xFFFFFFFF;
 	view_count = p_view_count;
 	is_orthogonal = p_is_orthogonal;
 	vaspect = p_vaspect;
@@ -224,8 +226,8 @@ void RendererSceneRender::environment_set_bg_color(RID p_env, const Color &p_col
 	environment_storage.environment_set_bg_color(p_env, p_color);
 }
 
-void RendererSceneRender::environment_set_bg_energy(RID p_env, float p_energy) {
-	environment_storage.environment_set_bg_energy(p_env, p_energy);
+void RendererSceneRender::environment_set_bg_energy(RID p_env, float p_multiplier, float p_exposure_value) {
+	environment_storage.environment_set_bg_energy(p_env, p_multiplier, p_exposure_value);
 }
 
 void RendererSceneRender::environment_set_canvas_max_layer(RID p_env, int p_max_layer) {
@@ -256,8 +258,12 @@ Color RendererSceneRender::environment_get_bg_color(RID p_env) const {
 	return environment_storage.environment_get_bg_color(p_env);
 }
 
-float RendererSceneRender::environment_get_bg_energy(RID p_env) const {
-	return environment_storage.environment_get_bg_energy(p_env);
+float RendererSceneRender::environment_get_bg_energy_multiplier(RID p_env) const {
+	return environment_storage.environment_get_bg_energy_multiplier(p_env);
+}
+
+float RendererSceneRender::environment_get_bg_intensity(RID p_env) const {
+	return environment_storage.environment_get_bg_intensity(p_env);
 }
 
 int RendererSceneRender::environment_get_canvas_max_layer(RID p_env) const {
@@ -286,8 +292,8 @@ RS::EnvironmentReflectionSource RendererSceneRender::environment_get_reflection_
 
 // Tonemap
 
-void RendererSceneRender::environment_set_tonemap(RID p_env, RS::EnvironmentToneMapper p_tone_mapper, float p_exposure, float p_white, bool p_auto_exposure, float p_min_luminance, float p_max_luminance, float p_auto_exp_speed, float p_auto_exp_scale) {
-	environment_storage.environment_set_tonemap(p_env, p_tone_mapper, p_exposure, p_white, p_auto_exposure, p_min_luminance, p_max_luminance, p_auto_exp_speed, p_auto_exp_scale);
+void RendererSceneRender::environment_set_tonemap(RID p_env, RS::EnvironmentToneMapper p_tone_mapper, float p_exposure, float p_white) {
+	environment_storage.environment_set_tonemap(p_env, p_tone_mapper, p_exposure, p_white);
 }
 
 RS::EnvironmentToneMapper RendererSceneRender::environment_get_tone_mapper(RID p_env) const {
@@ -302,34 +308,10 @@ float RendererSceneRender::environment_get_white(RID p_env) const {
 	return environment_storage.environment_get_white(p_env);
 }
 
-bool RendererSceneRender::environment_get_auto_exposure(RID p_env) const {
-	return environment_storage.environment_get_auto_exposure(p_env);
-}
-
-float RendererSceneRender::environment_get_min_luminance(RID p_env) const {
-	return environment_storage.environment_get_min_luminance(p_env);
-}
-
-float RendererSceneRender::environment_get_max_luminance(RID p_env) const {
-	return environment_storage.environment_get_max_luminance(p_env);
-}
-
-float RendererSceneRender::environment_get_auto_exp_speed(RID p_env) const {
-	return environment_storage.environment_get_auto_exp_speed(p_env);
-}
-
-float RendererSceneRender::environment_get_auto_exp_scale(RID p_env) const {
-	return environment_storage.environment_get_auto_exp_scale(p_env);
-}
-
-uint64_t RendererSceneRender::environment_get_auto_exposure_version(RID p_env) const {
-	return environment_storage.environment_get_auto_exposure_version(p_env);
-}
-
 // Fog
 
-void RendererSceneRender::environment_set_fog(RID p_env, bool p_enable, const Color &p_light_color, float p_light_energy, float p_sun_scatter, float p_density, float p_height, float p_height_density, float p_aerial_perspective) {
-	environment_storage.environment_set_fog(p_env, p_enable, p_light_color, p_light_energy, p_sun_scatter, p_density, p_height, p_height_density, p_aerial_perspective);
+void RendererSceneRender::environment_set_fog(RID p_env, bool p_enable, const Color &p_light_color, float p_light_energy, float p_sun_scatter, float p_density, float p_height, float p_height_density, float p_aerial_perspective, float p_sky_affect) {
+	environment_storage.environment_set_fog(p_env, p_enable, p_light_color, p_light_energy, p_sun_scatter, p_density, p_height, p_height_density, p_aerial_perspective, p_sky_affect);
 }
 
 bool RendererSceneRender::environment_get_fog_enabled(RID p_env) const {
@@ -352,6 +334,10 @@ float RendererSceneRender::environment_get_fog_density(RID p_env) const {
 	return environment_storage.environment_get_fog_density(p_env);
 }
 
+float RendererSceneRender::environment_get_fog_sky_affect(RID p_env) const {
+	return environment_storage.environment_get_fog_sky_affect(p_env);
+}
+
 float RendererSceneRender::environment_get_fog_height(RID p_env) const {
 	return environment_storage.environment_get_fog_height(p_env);
 }
@@ -366,8 +352,8 @@ float RendererSceneRender::environment_get_fog_aerial_perspective(RID p_env) con
 
 // Volumetric Fog
 
-void RendererSceneRender::environment_set_volumetric_fog(RID p_env, bool p_enable, float p_density, const Color &p_albedo, const Color &p_emission, float p_emission_energy, float p_anisotropy, float p_length, float p_detail_spread, float p_gi_inject, bool p_temporal_reprojection, float p_temporal_reprojection_amount, float p_ambient_inject) {
-	environment_storage.environment_set_volumetric_fog(p_env, p_enable, p_density, p_albedo, p_emission, p_emission_energy, p_anisotropy, p_length, p_detail_spread, p_gi_inject, p_temporal_reprojection, p_temporal_reprojection_amount, p_ambient_inject);
+void RendererSceneRender::environment_set_volumetric_fog(RID p_env, bool p_enable, float p_density, const Color &p_albedo, const Color &p_emission, float p_emission_energy, float p_anisotropy, float p_length, float p_detail_spread, float p_gi_inject, bool p_temporal_reprojection, float p_temporal_reprojection_amount, float p_ambient_inject, float p_sky_affect) {
+	environment_storage.environment_set_volumetric_fog(p_env, p_enable, p_density, p_albedo, p_emission, p_emission_energy, p_anisotropy, p_length, p_detail_spread, p_gi_inject, p_temporal_reprojection, p_temporal_reprojection_amount, p_ambient_inject, p_sky_affect);
 }
 
 bool RendererSceneRender::environment_get_volumetric_fog_enabled(RID p_env) const {
@@ -404,6 +390,10 @@ float RendererSceneRender::environment_get_volumetric_fog_detail_spread(RID p_en
 
 float RendererSceneRender::environment_get_volumetric_fog_gi_inject(RID p_env) const {
 	return environment_storage.environment_get_volumetric_fog_gi_inject(p_env);
+}
+
+float RendererSceneRender::environment_get_volumetric_fog_sky_affect(RID p_env) const {
+	return environment_storage.environment_get_volumetric_fog_sky_affect(p_env);
 }
 
 bool RendererSceneRender::environment_get_volumetric_fog_temporal_reprojection(RID p_env) const {

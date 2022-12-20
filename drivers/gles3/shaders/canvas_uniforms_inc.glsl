@@ -25,38 +25,7 @@
 #define FLAGS_DEFAULT_SPECULAR_MAP_USED uint(1 << 27)
 
 #define FLAGS_USE_MSDF uint(1 << 28)
-
-// must be always 128 bytes long
-struct DrawData {
-	vec2 world_x;
-	vec2 world_y;
-	vec2 world_ofs;
-	vec2 color_texture_pixel_size;
-#ifdef USE_PRIMITIVE
-	vec2 point_a;
-	vec2 point_b;
-	vec2 point_c;
-	vec2 uv_a;
-	vec2 uv_b;
-	vec2 uv_c;
-	uint color_a_rg;
-	uint color_a_ba;
-	uint color_b_rg;
-	uint color_b_ba;
-	uint color_c_rg;
-	uint color_c_ba;
-#else
-	vec4 modulation;
-	vec4 ninepatch_margins;
-	vec4 dst_rect; //for built-in rect and UV
-	vec4 src_rect;
-	uint pad;
-	uint pad2;
-#endif
-	uint flags;
-	uint specular_shininess;
-	uvec4 lights;
-};
+#define FLAGS_USE_LCD uint(1 << 29)
 
 layout(std140) uniform GlobalShaderUniformData { //ubo:1
 	vec4 global_shader_uniforms[MAX_GLOBAL_SHADER_UNIFORMS];
@@ -81,6 +50,7 @@ layout(std140) uniform CanvasData { //ubo:0
 	uint pad2;
 };
 
+#ifndef DISABLE_LIGHTING
 #define LIGHT_FLAGS_BLEND_MASK uint(3 << 16)
 #define LIGHT_FLAGS_BLEND_MODE_ADD uint(0 << 16)
 #define LIGHT_FLAGS_BLEND_MODE_SUB uint(1 << 16)
@@ -111,10 +81,6 @@ struct Light {
 };
 
 layout(std140) uniform LightData { //ubo:2
-	Light light_data[MAX_LIGHTS];
+	Light light_array[MAX_LIGHTS];
 };
-
-layout(std140) uniform DrawDataInstances { //ubo:3
-
-	DrawData draw_data[MAX_DRAW_DATA_INSTANCES];
-};
+#endif // DISABLE_LIGHTING

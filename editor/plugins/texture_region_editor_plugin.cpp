@@ -36,8 +36,11 @@
 #include "editor/editor_node.h"
 #include "editor/editor_scale.h"
 #include "editor/editor_settings.h"
+#include "editor/editor_undo_redo_manager.h"
 #include "scene/gui/check_box.h"
+#include "scene/gui/option_button.h"
 #include "scene/gui/separator.h"
+#include "scene/gui/spin_box.h"
 #include "scene/gui/view_panner.h"
 #include "scene/resources/texture.h"
 
@@ -85,8 +88,8 @@ void TextureRegionEditor::_region_draw() {
 	mtx.scale_basis(Vector2(draw_zoom, draw_zoom));
 
 	RS::get_singleton()->canvas_item_add_set_transform(edit_draw->get_canvas_item(), mtx);
-	edit_draw->draw_rect(Rect2(Point2(), base_tex->get_size()), Color(0.5, 0.5, 0.5, 0.5), false);
-	edit_draw->draw_texture(base_tex, Point2());
+	edit_draw->draw_rect(Rect2(Point2(), preview_tex->get_size()), Color(0.5, 0.5, 0.5, 0.5), false);
+	edit_draw->draw_texture(preview_tex, Point2());
 	RS::get_singleton()->canvas_item_add_set_transform(edit_draw->get_canvas_item(), Transform2D());
 
 	const Color color = get_theme_color(SNAME("mono_color"), SNAME("Editor"));
@@ -241,7 +244,7 @@ void TextureRegionEditor::_region_draw() {
 		hscroll->set_value((hscroll->get_min() + hscroll->get_max() - hscroll->get_page()) / 2);
 		vscroll->set_value((vscroll->get_min() + vscroll->get_max() - vscroll->get_page()) / 2);
 		// This ensures that the view is updated correctly.
-		callable_mp(this, &TextureRegionEditor::_pan_callback).bind(Vector2(1, 0)).call_deferredp(nullptr, 0);
+		callable_mp(this, &TextureRegionEditor::_pan_callback).bind(Vector2(1, 0)).call_deferred();
 		request_center = false;
 	}
 
@@ -297,6 +300,7 @@ void TextureRegionEditor::_region_input(const Ref<InputEvent> &p_input) {
 		mtx.xform(rect.position + Vector2(0, rect.size.y / 2)) + Vector2(-handle_offset, 0)
 	};
 
+	Ref<EditorUndoRedoManager> &undo_redo = EditorNode::get_undo_redo();
 	Ref<InputEventMouseButton> mb = p_input;
 	if (mb.is_valid()) {
 		if (mb->get_button_index() == MouseButton::LEFT) {
@@ -380,8 +384,8 @@ void TextureRegionEditor::_region_input(const Ref<InputEvent> &p_input) {
 							}
 							undo_redo->add_do_method(this, "_update_rect");
 							undo_redo->add_undo_method(this, "_update_rect");
-							undo_redo->add_do_method(edit_draw, "update");
-							undo_redo->add_undo_method(edit_draw, "update");
+							undo_redo->add_do_method(edit_draw, "queue_redraw");
+							undo_redo->add_undo_method(edit_draw, "queue_redraw");
 							undo_redo->commit_action();
 							break;
 						}
@@ -454,8 +458,8 @@ void TextureRegionEditor::_region_input(const Ref<InputEvent> &p_input) {
 				}
 				undo_redo->add_do_method(this, "_update_rect");
 				undo_redo->add_undo_method(this, "_update_rect");
-				undo_redo->add_do_method(edit_draw, "update");
-				undo_redo->add_undo_method(edit_draw, "update");
+				undo_redo->add_do_method(edit_draw, "queue_redraw");
+				undo_redo->add_undo_method(edit_draw, "queue_redraw");
 				undo_redo->commit_action();
 				drag = false;
 				creating = false;
@@ -476,7 +480,7 @@ void TextureRegionEditor::_region_input(const Ref<InputEvent> &p_input) {
 				} else {
 					apply_rect(rect_prev);
 					rect = rect_prev;
-					edit_draw->update();
+					edit_draw->queue_redraw();
 					drag_index = -1;
 				}
 			}
@@ -545,7 +549,7 @@ void TextureRegionEditor::_region_input(const Ref<InputEvent> &p_input) {
 					rect = Rect2(drag_from, Size2());
 					rect.expand_to(new_pos);
 					apply_rect(rect);
-					edit_draw->update();
+					edit_draw->queue_redraw();
 					return;
 				}
 
@@ -600,7 +604,7 @@ void TextureRegionEditor::_region_input(const Ref<InputEvent> &p_input) {
 					} break;
 				}
 			}
-			edit_draw->update();
+			edit_draw->queue_redraw();
 		}
 	}
 
@@ -641,7 +645,7 @@ void TextureRegionEditor::_scroll_changed(float) {
 
 	draw_ofs.x = hscroll->get_value();
 	draw_ofs.y = vscroll->get_value();
-	edit_draw->update();
+	edit_draw->queue_redraw();
 }
 
 void TextureRegionEditor::_set_snap_mode(int p_mode) {
@@ -657,37 +661,37 @@ void TextureRegionEditor::_set_snap_mode(int p_mode) {
 		_update_autoslice();
 	}
 
-	edit_draw->update();
+	edit_draw->queue_redraw();
 }
 
 void TextureRegionEditor::_set_snap_off_x(float p_val) {
 	snap_offset.x = p_val;
-	edit_draw->update();
+	edit_draw->queue_redraw();
 }
 
 void TextureRegionEditor::_set_snap_off_y(float p_val) {
 	snap_offset.y = p_val;
-	edit_draw->update();
+	edit_draw->queue_redraw();
 }
 
 void TextureRegionEditor::_set_snap_step_x(float p_val) {
 	snap_step.x = p_val;
-	edit_draw->update();
+	edit_draw->queue_redraw();
 }
 
 void TextureRegionEditor::_set_snap_step_y(float p_val) {
 	snap_step.y = p_val;
-	edit_draw->update();
+	edit_draw->queue_redraw();
 }
 
 void TextureRegionEditor::_set_snap_sep_x(float p_val) {
 	snap_separation.x = p_val;
-	edit_draw->update();
+	edit_draw->queue_redraw();
 }
 
 void TextureRegionEditor::_set_snap_sep_y(float p_val) {
 	snap_separation.y = p_val;
-	edit_draw->update();
+	edit_draw->queue_redraw();
 }
 
 void TextureRegionEditor::_zoom_on_position(float p_zoom, Point2 p_position) {
@@ -701,7 +705,7 @@ void TextureRegionEditor::_zoom_on_position(float p_zoom, Point2 p_position) {
 	ofs = ofs / prev_zoom - ofs / draw_zoom;
 	draw_ofs = (draw_ofs + ofs).round();
 
-	edit_draw->update();
+	edit_draw->queue_redraw();
 }
 
 void TextureRegionEditor::_zoom_in() {
@@ -822,7 +826,7 @@ void TextureRegionEditor::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE:
 		case NOTIFICATION_THEME_CHANGED: {
-			edit_draw->add_theme_style_override("panel", get_theme_stylebox(SNAME("bg"), SNAME("Tree")));
+			edit_draw->add_theme_style_override("panel", get_theme_stylebox(SNAME("panel"), SNAME("Tree")));
 		} break;
 		case NOTIFICATION_READY: {
 			zoom_out->set_icon(get_theme_icon(SNAME("ZoomLess"), SNAME("EditorIcons")));
@@ -834,7 +838,7 @@ void TextureRegionEditor::_notification(int p_what) {
 			[[fallthrough]];
 		}
 		case EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED: {
-			panner->setup((ViewPanner::ControlScheme)EDITOR_GET("editors/panning/sub_editors_panning_scheme").operator int(), ED_GET_SHORTCUT("canvas_item_editor/pan_view"), bool(EditorSettings::get_singleton()->get("editors/panning/simple_panning")));
+			panner->setup((ViewPanner::ControlScheme)EDITOR_GET("editors/panning/sub_editors_panning_scheme").operator int(), ED_GET_SHORTCUT("canvas_item_editor/pan_view"), bool(EDITOR_GET("editors/panning/simple_panning")));
 		} break;
 		case NOTIFICATION_VISIBILITY_CHANGED: {
 			if (snap_mode == SNAP_AUTOSLICE && is_visible() && autoslice_is_dirty) {
@@ -904,6 +908,13 @@ void TextureRegionEditor::edit(Object *p_obj) {
 	if (atlas_tex.is_valid()) {
 		atlas_tex->disconnect("changed", callable_mp(this, &TextureRegionEditor::_texture_changed));
 	}
+
+	node_sprite_2d = nullptr;
+	node_sprite_3d = nullptr;
+	node_ninepatch = nullptr;
+	obj_styleBox = Ref<StyleBoxTexture>(nullptr);
+	atlas_tex = Ref<AtlasTexture>(nullptr);
+
 	if (p_obj) {
 		node_sprite_2d = Object::cast_to<Sprite2D>(p_obj);
 		node_sprite_3d = Object::cast_to<Sprite3D>(p_obj);
@@ -925,14 +936,9 @@ void TextureRegionEditor::edit(Object *p_obj) {
 			p_obj->connect("texture_changed", callable_mp(this, &TextureRegionEditor::_texture_changed));
 		}
 		_edit_region();
-	} else {
-		node_sprite_2d = nullptr;
-		node_sprite_3d = nullptr;
-		node_ninepatch = nullptr;
-		obj_styleBox = Ref<StyleBoxTexture>(nullptr);
-		atlas_tex = Ref<AtlasTexture>(nullptr);
 	}
-	edit_draw->update();
+
+	edit_draw->queue_redraw();
 	popup_centered_ratio(0.5);
 	request_center = true;
 }
@@ -945,26 +951,89 @@ void TextureRegionEditor::_texture_changed() {
 }
 
 void TextureRegionEditor::_edit_region() {
+	CanvasItem::TextureFilter filter = CanvasItem::TEXTURE_FILTER_NEAREST_WITH_MIPMAPS;
+
 	Ref<Texture2D> texture = nullptr;
 	if (atlas_tex.is_valid()) {
 		texture = atlas_tex->get_atlas();
 	} else if (node_sprite_2d) {
 		texture = node_sprite_2d->get_texture();
+		filter = node_sprite_2d->get_texture_filter_in_tree();
 	} else if (node_sprite_3d) {
 		texture = node_sprite_3d->get_texture();
+
+		StandardMaterial3D::TextureFilter filter_3d = node_sprite_3d->get_texture_filter();
+
+		switch (filter_3d) {
+			case StandardMaterial3D::TEXTURE_FILTER_NEAREST:
+				filter = CanvasItem::TEXTURE_FILTER_NEAREST;
+				break;
+			case StandardMaterial3D::TEXTURE_FILTER_LINEAR:
+				filter = CanvasItem::TEXTURE_FILTER_LINEAR;
+				break;
+			case StandardMaterial3D::TEXTURE_FILTER_NEAREST_WITH_MIPMAPS:
+				filter = CanvasItem::TEXTURE_FILTER_NEAREST_WITH_MIPMAPS;
+				break;
+			case StandardMaterial3D::TEXTURE_FILTER_LINEAR_WITH_MIPMAPS:
+				filter = CanvasItem::TEXTURE_FILTER_LINEAR_WITH_MIPMAPS;
+				break;
+			case StandardMaterial3D::TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC:
+				filter = CanvasItem::TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC;
+				break;
+			case StandardMaterial3D::TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC:
+				filter = CanvasItem::TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC;
+				break;
+			default:
+				// fallback to project default
+				filter = CanvasItem::TEXTURE_FILTER_PARENT_NODE;
+				break;
+		}
 	} else if (node_ninepatch) {
 		texture = node_ninepatch->get_texture();
+		filter = node_ninepatch->get_texture_filter_in_tree();
 	} else if (obj_styleBox.is_valid()) {
 		texture = obj_styleBox->get_texture();
 	}
 
+	// occurs when get_texture_filter_in_tree reaches the scene root
+	if (filter == CanvasItem::TEXTURE_FILTER_PARENT_NODE) {
+		SubViewport *root = EditorNode::get_singleton()->get_scene_root();
+
+		if (root != nullptr) {
+			Viewport::DefaultCanvasItemTextureFilter filter_default = root->get_default_canvas_item_texture_filter();
+
+			// depending on default filter, set filter to match, otherwise fall back on nearest w/ mipmaps
+			switch (filter_default) {
+				case DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST:
+					filter = CanvasItem::TEXTURE_FILTER_NEAREST;
+					break;
+				case DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_LINEAR:
+					filter = CanvasItem::TEXTURE_FILTER_LINEAR;
+					break;
+				case DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_LINEAR_WITH_MIPMAPS:
+					filter = CanvasItem::TEXTURE_FILTER_LINEAR_WITH_MIPMAPS;
+					break;
+				case DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST_WITH_MIPMAPS:
+				default:
+					filter = CanvasItem::TEXTURE_FILTER_NEAREST_WITH_MIPMAPS;
+					break;
+			}
+		} else {
+			filter = CanvasItem::TEXTURE_FILTER_NEAREST_WITH_MIPMAPS;
+		}
+	}
+
 	if (texture.is_null()) {
+		preview_tex->set_diffuse_texture(nullptr);
 		_zoom_reset();
 		hscroll->hide();
 		vscroll->hide();
-		edit_draw->update();
+		edit_draw->queue_redraw();
 		return;
 	}
+
+	preview_tex->set_texture_filter(filter);
+	preview_tex->set_diffuse_texture(texture);
 
 	if (cache_map.has(texture->get_rid())) {
 		autoslice_cache = cache_map[texture->get_rid()];
@@ -978,7 +1047,7 @@ void TextureRegionEditor::_edit_region() {
 	}
 
 	_update_rect();
-	edit_draw->update();
+	edit_draw->queue_redraw();
 }
 
 Vector2 TextureRegionEditor::snap_point(Vector2 p_target) const {
@@ -999,7 +1068,8 @@ TextureRegionEditor::TextureRegionEditor() {
 	node_ninepatch = nullptr;
 	obj_styleBox = Ref<StyleBoxTexture>(nullptr);
 	atlas_tex = Ref<AtlasTexture>(nullptr);
-	undo_redo = EditorNode::get_singleton()->get_undo_redo();
+
+	preview_tex = Ref<CanvasTexture>(memnew(CanvasTexture));
 
 	snap_step = Vector2(10, 10);
 	snap_separation = Vector2(0, 0);
@@ -1109,19 +1179,19 @@ TextureRegionEditor::TextureRegionEditor() {
 
 	zoom_out = memnew(Button);
 	zoom_out->set_flat(true);
-	zoom_out->set_tooltip(TTR("Zoom Out"));
+	zoom_out->set_tooltip_text(TTR("Zoom Out"));
 	zoom_out->connect("pressed", callable_mp(this, &TextureRegionEditor::_zoom_out));
 	zoom_hb->add_child(zoom_out);
 
 	zoom_reset = memnew(Button);
 	zoom_reset->set_flat(true);
-	zoom_reset->set_tooltip(TTR("Zoom Reset"));
+	zoom_reset->set_tooltip_text(TTR("Zoom Reset"));
 	zoom_reset->connect("pressed", callable_mp(this, &TextureRegionEditor::_zoom_reset));
 	zoom_hb->add_child(zoom_reset);
 
 	zoom_in = memnew(Button);
 	zoom_in->set_flat(true);
-	zoom_in->set_tooltip(TTR("Zoom In"));
+	zoom_in->set_tooltip_text(TTR("Zoom In"));
 	zoom_in->connect("pressed", callable_mp(this, &TextureRegionEditor::_zoom_in));
 	zoom_hb->add_child(zoom_in);
 

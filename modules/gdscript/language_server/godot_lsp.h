@@ -546,7 +546,7 @@ struct TextDocumentSyncOptions {
 	 * If present will save wait until requests are sent to the server. If omitted the request should not be
 	 * sent.
 	 */
-	bool willSaveWaitUntil = false;
+	bool willSaveWaitUntil = true;
 
 	/**
 	 * If present save notifications are sent to the server. If omitted the notification should not be
@@ -702,7 +702,7 @@ struct DiagnosticRelatedInformation {
 
 	Dictionary to_json() const {
 		Dictionary dict;
-		dict["location"] = location.to_json(),
+		dict["location"] = location.to_json();
 		dict["message"] = message;
 		return dict;
 	}

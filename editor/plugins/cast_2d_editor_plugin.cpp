@@ -32,6 +32,7 @@
 
 #include "canvas_item_editor_plugin.h"
 #include "editor/editor_node.h"
+#include "editor/editor_undo_redo_manager.h"
 #include "scene/2d/ray_cast_2d.h"
 #include "scene/2d/shape_cast_2d.h"
 
@@ -76,6 +77,7 @@ bool Cast2DEditor::forward_canvas_gui_input(const Ref<InputEvent> &p_event) {
 				return false;
 			}
 		} else if (pressed) {
+			Ref<EditorUndoRedoManager> &undo_redo = EditorNode::get_undo_redo();
 			undo_redo->create_action(TTR("Set target_position"));
 			undo_redo->add_do_property(node, "target_position", target_position);
 			undo_redo->add_do_method(canvas_item_editor, "update_viewport");
@@ -127,10 +129,6 @@ void Cast2DEditor::edit(Node2D *p_node) {
 	}
 
 	canvas_item_editor->update_viewport();
-}
-
-Cast2DEditor::Cast2DEditor() {
-	undo_redo = EditorNode::get_singleton()->get_undo_redo();
 }
 
 ///////////////////////

@@ -34,6 +34,7 @@
 #include "core/math/aabb.h"
 #include "core/math/basis.h"
 #include "core/math/plane.h"
+#include "core/templates/vector.h"
 
 struct _NO_DISCARD_ Transform3D {
 	Basis basis;
@@ -74,6 +75,7 @@ struct _NO_DISCARD_ Transform3D {
 	void orthogonalize();
 	Transform3D orthogonalized() const;
 	bool is_equal_approx(const Transform3D &p_transform) const;
+	bool is_finite() const;
 
 	bool operator==(const Transform3D &p_transform) const;
 	bool operator!=(const Transform3D &p_transform) const;
@@ -103,7 +105,6 @@ struct _NO_DISCARD_ Transform3D {
 	void operator*=(const real_t p_val);
 	Transform3D operator*(const real_t p_val) const;
 
-	Transform3D spherical_interpolate_with(const Transform3D &p_transform, real_t p_c) const;
 	Transform3D interpolate_with(const Transform3D &p_transform, real_t p_c) const;
 
 	_FORCE_INLINE_ Transform3D inverse_xform(const Transform3D &t) const {

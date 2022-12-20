@@ -64,6 +64,7 @@ public:
 	virtual void erase_message(const StringName &p_src_text, const StringName &p_context = "");
 	virtual void get_message_list(List<StringName> *r_messages) const;
 	virtual int get_message_count() const;
+	virtual Vector<String> get_translated_message_list() const;
 
 	Translation() {}
 };
@@ -102,6 +103,7 @@ class TranslationServer : public Object {
 
 	static TranslationServer *singleton;
 	bool _load_translations(const String &p_from);
+	String _standardize_locale(const String &p_locale, bool p_add_defaults) const;
 
 	StringName _get_message_from_translations(const StringName &p_message, const StringName &p_context, const String &p_locale, bool plural, const String &p_message_plural = "", int p_n = 0) const;
 
@@ -145,7 +147,7 @@ public:
 
 	String get_locale_name(const String &p_locale) const;
 
-	Array get_loaded_locales() const;
+	PackedStringArray get_loaded_locales() const;
 
 	void add_translation(const Ref<Translation> &p_translation);
 	void remove_translation(const Ref<Translation> &p_translation);

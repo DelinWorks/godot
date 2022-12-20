@@ -133,7 +133,13 @@ void Joint2D::set_node_a(const NodePath &p_node_a) {
 	}
 
 	a = p_node_a;
-	_update_joint();
+	if (Engine::get_singleton()->is_editor_hint()) {
+		// When in editor, the setter may be called as a result of node rename.
+		// It happens before the node actually changes its name, which triggers false warning.
+		callable_mp(this, &Joint2D::_update_joint).call_deferred();
+	} else {
+		_update_joint();
+	}
 }
 
 NodePath Joint2D::get_node_a() const {
@@ -150,7 +156,11 @@ void Joint2D::set_node_b(const NodePath &p_node_b) {
 	}
 
 	b = p_node_b;
-	_update_joint();
+	if (Engine::get_singleton()->is_editor_hint()) {
+		callable_mp(this, &Joint2D::_update_joint).call_deferred();
+	} else {
+		_update_joint();
+	}
 }
 
 NodePath Joint2D::get_node_b() const {
@@ -202,8 +212,8 @@ bool Joint2D::get_exclude_nodes_from_collision() const {
 	return exclude_from_collision;
 }
 
-TypedArray<String> Joint2D::get_configuration_warnings() const {
-	TypedArray<String> warnings = Node2D::get_configuration_warnings();
+PackedStringArray Joint2D::get_configuration_warnings() const {
+	PackedStringArray warnings = Node2D::get_configuration_warnings();
 
 	if (!warning.is_empty()) {
 		warnings.push_back(warning);
@@ -267,7 +277,7 @@ void PinJoint2D::_configure_joint(RID p_joint, PhysicsBody2D *body_a, PhysicsBod
 
 void PinJoint2D::set_softness(real_t p_softness) {
 	softness = p_softness;
-	update();
+	queue_redraw();
 	if (is_configured()) {
 		PhysicsServer2D::get_singleton()->pin_joint_set_param(get_joint(), PhysicsServer2D::PIN_JOINT_SOFTNESS, p_softness);
 	}
@@ -321,7 +331,7 @@ void GrooveJoint2D::_configure_joint(RID p_joint, PhysicsBody2D *body_a, Physics
 
 void GrooveJoint2D::set_length(real_t p_length) {
 	length = p_length;
-	update();
+	queue_redraw();
 }
 
 real_t GrooveJoint2D::get_length() const {
@@ -330,7 +340,7 @@ real_t GrooveJoint2D::get_length() const {
 
 void GrooveJoint2D::set_initial_offset(real_t p_initial_offset) {
 	initial_offset = p_initial_offset;
-	update();
+	queue_redraw();
 }
 
 real_t GrooveJoint2D::get_initial_offset() const {
@@ -387,7 +397,7 @@ void DampedSpringJoint2D::_configure_joint(RID p_joint, PhysicsBody2D *body_a, P
 
 void DampedSpringJoint2D::set_length(real_t p_length) {
 	length = p_length;
-	update();
+	queue_redraw();
 }
 
 real_t DampedSpringJoint2D::get_length() const {
@@ -396,7 +406,7 @@ real_t DampedSpringJoint2D::get_length() const {
 
 void DampedSpringJoint2D::set_rest_length(real_t p_rest_length) {
 	rest_length = p_rest_length;
-	update();
+	queue_redraw();
 	if (is_configured()) {
 		PhysicsServer2D::get_singleton()->damped_spring_joint_set_param(get_joint(), PhysicsServer2D::DAMPED_SPRING_REST_LENGTH, p_rest_length ? p_rest_length : length);
 	}
@@ -408,7 +418,7 @@ real_t DampedSpringJoint2D::get_rest_length() const {
 
 void DampedSpringJoint2D::set_stiffness(real_t p_stiffness) {
 	stiffness = p_stiffness;
-	update();
+	queue_redraw();
 	if (is_configured()) {
 		PhysicsServer2D::get_singleton()->damped_spring_joint_set_param(get_joint(), PhysicsServer2D::DAMPED_SPRING_STIFFNESS, p_stiffness);
 	}
@@ -420,7 +430,7 @@ real_t DampedSpringJoint2D::get_stiffness() const {
 
 void DampedSpringJoint2D::set_damping(real_t p_damping) {
 	damping = p_damping;
-	update();
+	queue_redraw();
 	if (is_configured()) {
 		PhysicsServer2D::get_singleton()->damped_spring_joint_set_param(get_joint(), PhysicsServer2D::DAMPED_SPRING_DAMPING, p_damping);
 	}

@@ -200,7 +200,7 @@ public:
 	RID get_cache(Args... args) {
 		uint32_t h = hash_murmur3_one_32(1); //1 view
 		h = hash_murmur3_one_32(sizeof...(Args), h);
-		h = _hash_args(h, args...);
+		h = _hash_rids(h, args...);
 		h = hash_murmur3_one_32(0, h); // 0 passes
 		h = hash_fmix32(h);
 
@@ -228,7 +228,7 @@ public:
 	RID get_cache_multiview(uint32_t p_views, Args... args) {
 		uint32_t h = hash_murmur3_one_32(p_views);
 		h = hash_murmur3_one_32(sizeof...(Args), h);
-		h = _hash_args(h, args...);
+		h = _hash_rids(h, args...);
 		h = hash_murmur3_one_32(0, h); // 0 passes
 		h = hash_fmix32(h);
 
@@ -254,11 +254,11 @@ public:
 
 	RID get_cache_multipass(const Vector<RID> &p_textures, const Vector<RD::FramebufferPass> &p_passes, uint32_t p_views = 1) {
 		uint32_t h = hash_murmur3_one_32(p_views);
-		h = hash_murmur3_one_32(p_textures.size());
+		h = hash_murmur3_one_32(p_textures.size(), h);
 		for (int i = 0; i < p_textures.size(); i++) {
 			h = hash_murmur3_one_64(p_textures[i].get_id(), h);
 		}
-		h = hash_murmur3_one_32(p_passes.size());
+		h = hash_murmur3_one_32(p_passes.size(), h);
 		for (int i = 0; i < p_passes.size(); i++) {
 			h = _hash_pass(p_passes[i], h);
 		}

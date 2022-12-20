@@ -1,8 +1,3 @@
-#if REAL_T_IS_DOUBLE
-using real_t = System.Double;
-#else
-using real_t = System.Single;
-#endif
 using System;
 using System.Runtime.InteropServices;
 
@@ -34,7 +29,7 @@ namespace Godot
         /// <value>Equivalent to <see cref="Column0"/> and array index <c>[0]</c>.</value>
         public Vector3 x
         {
-            get => Column0;
+            readonly get => Column0;
             set => Column0 = value;
         }
 
@@ -44,7 +39,7 @@ namespace Godot
         /// <value>Equivalent to <see cref="Column1"/> and array index <c>[1]</c>.</value>
         public Vector3 y
         {
-            get => Column1;
+            readonly get => Column1;
             set => Column1 = value;
         }
 
@@ -54,7 +49,7 @@ namespace Godot
         /// <value>Equivalent to <see cref="Column2"/> and array index <c>[2]</c>.</value>
         public Vector3 z
         {
-            get => Column2;
+            readonly get => Column2;
             set => Column2 = value;
         }
 
@@ -85,7 +80,7 @@ namespace Godot
         /// <value>Equivalent to <see cref="x"/> and array index <c>[0]</c>.</value>
         public Vector3 Column0
         {
-            get => new Vector3(Row0.x, Row1.x, Row2.x);
+            readonly get => new Vector3(Row0.x, Row1.x, Row2.x);
             set
             {
                 Row0.x = value.x;
@@ -100,7 +95,7 @@ namespace Godot
         /// <value>Equivalent to <see cref="y"/> and array index <c>[1]</c>.</value>
         public Vector3 Column1
         {
-            get => new Vector3(Row0.y, Row1.y, Row2.y);
+            readonly get => new Vector3(Row0.y, Row1.y, Row2.y);
             set
             {
                 Row0.y = value.x;
@@ -115,7 +110,7 @@ namespace Godot
         /// <value>Equivalent to <see cref="z"/> and array index <c>[2]</c>.</value>
         public Vector3 Column2
         {
-            get => new Vector3(Row0.z, Row1.z, Row2.z);
+            readonly get => new Vector3(Row0.z, Row1.z, Row2.z);
             set
             {
                 Row0.z = value.x;
@@ -130,7 +125,7 @@ namespace Godot
         /// <value>Equivalent to the lengths of each column vector, but negative if the determinant is negative.</value>
         public Vector3 Scale
         {
-            get
+            readonly get
             {
                 real_t detSign = Mathf.Sign(Determinant());
                 return detSign * new Vector3
@@ -153,10 +148,13 @@ namespace Godot
         /// Access whole columns in the form of <see cref="Vector3"/>.
         /// </summary>
         /// <param name="column">Which column vector.</param>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// <paramref name="column"/> is not 0, 1, 2 or 3.
+        /// </exception>
         /// <value>The basis column.</value>
         public Vector3 this[int column]
         {
-            get
+            readonly get
             {
                 switch (column)
                 {
@@ -167,7 +165,7 @@ namespace Godot
                     case 2:
                         return Column2;
                     default:
-                        throw new IndexOutOfRangeException();
+                        throw new ArgumentOutOfRangeException(nameof(column));
                 }
             }
             set
@@ -184,7 +182,7 @@ namespace Godot
                         Column2 = value;
                         return;
                     default:
-                        throw new IndexOutOfRangeException();
+                        throw new ArgumentOutOfRangeException(nameof(column));
                 }
             }
         }
@@ -197,7 +195,7 @@ namespace Godot
         /// <value>The matrix element.</value>
         public real_t this[int column, int row]
         {
-            get
+            readonly get
             {
                 return this[column][row];
             }
@@ -236,7 +234,7 @@ namespace Godot
         /// and is usually considered invalid.
         /// </summary>
         /// <returns>The determinant of the basis matrix.</returns>
-        public real_t Determinant()
+        public readonly real_t Determinant()
         {
             real_t cofac00 = Row1[1] * Row2[2] - Row1[2] * Row2[1];
             real_t cofac10 = Row1[2] * Row2[0] - Row1[0] * Row2[2];
@@ -246,54 +244,262 @@ namespace Godot
         }
 
         /// <summary>
-        /// Returns the basis's rotation in the form of Euler angles
-        /// (in the YXZ convention: when *decomposing*, first Z, then X, and Y last).
-        /// The returned vector contains the rotation angles in
-        /// the format (X angle, Y angle, Z angle).
+        /// Returns the basis's rotation in the form of Euler angles.
+        /// The Euler order depends on the [param order] parameter,
+        /// by default it uses the YXZ convention: when decomposing,
+        /// first Z, then X, and Y last. The returned vector contains
+        /// the rotation angles in the format (X angle, Y angle, Z angle).
         ///
         /// Consider using the <see cref="GetRotationQuaternion"/> method instead, which
         /// returns a <see cref="Quaternion"/> quaternion instead of Euler angles.
         /// </summary>
+        /// <param name="order">The Euler order to use. By default, use YXZ order (most common).</param>
         /// <returns>A <see cref="Vector3"/> representing the basis rotation in Euler angles.</returns>
-        public Vector3 GetEuler()
+        public readonly Vector3 GetEuler(EulerOrder order = EulerOrder.Yxz)
         {
-            Basis m = Orthonormalized();
-
-            Vector3 euler;
-            euler.z = 0.0f;
-
-            real_t mzy = m.Row1[2];
-
-            if (mzy < 1.0f)
+            switch (order)
             {
-                if (mzy > -1.0f)
+                case EulerOrder.Xyz:
                 {
-                    euler.x = Mathf.Asin(-mzy);
-                    euler.y = Mathf.Atan2(m.Row0[2], m.Row2[2]);
-                    euler.z = Mathf.Atan2(m.Row1[0], m.Row1[1]);
+                    // Euler angles in XYZ convention.
+                    // See https://en.wikipedia.org/wiki/Euler_angles#Rotation_matrix
+                    //
+                    // rot =  cy*cz          -cy*sz           sy
+                    //        cz*sx*sy+cx*sz  cx*cz-sx*sy*sz -cy*sx
+                    //       -cx*cz*sy+sx*sz  cz*sx+cx*sy*sz  cx*cy
+                    Vector3 euler;
+                    real_t sy = Row0[2];
+                    if (sy < (1.0f - Mathf.Epsilon))
+                    {
+                        if (sy > -(1.0f - Mathf.Epsilon))
+                        {
+                            // is this a pure Y rotation?
+                            if (Row1[0] == 0 && Row0[1] == 0 && Row1[2] == 0 && Row2[1] == 0 && Row1[1] == 1)
+                            {
+                                // return the simplest form (human friendlier in editor and scripts)
+                                euler.x = 0;
+                                euler.y = Mathf.Atan2(Row0[2], Row0[0]);
+                                euler.z = 0;
+                            }
+                            else
+                            {
+                                euler.x = Mathf.Atan2(-Row1[2], Row2[2]);
+                                euler.y = Mathf.Asin(sy);
+                                euler.z = Mathf.Atan2(-Row0[1], Row0[0]);
+                            }
+                        }
+                        else
+                        {
+                            euler.x = Mathf.Atan2(Row2[1], Row1[1]);
+                            euler.y = -Mathf.Tau / 4.0f;
+                            euler.z = 0.0f;
+                        }
+                    }
+                    else
+                    {
+                        euler.x = Mathf.Atan2(Row2[1], Row1[1]);
+                        euler.y = Mathf.Tau / 4.0f;
+                        euler.z = 0.0f;
+                    }
+                    return euler;
                 }
-                else
+                case EulerOrder.Xzy:
                 {
-                    euler.x = Mathf.Pi * 0.5f;
-                    euler.y = -Mathf.Atan2(-m.Row0[1], m.Row0[0]);
+                    // Euler angles in XZY convention.
+                    // See https://en.wikipedia.org/wiki/Euler_angles#Rotation_matrix
+                    //
+                    // rot =  cz*cy             -sz             cz*sy
+                    //        sx*sy+cx*cy*sz    cx*cz           cx*sz*sy-cy*sx
+                    //        cy*sx*sz          cz*sx           cx*cy+sx*sz*sy
+                    Vector3 euler;
+                    real_t sz = Row0[1];
+                    if (sz < (1.0f - Mathf.Epsilon))
+                    {
+                        if (sz > -(1.0f - Mathf.Epsilon))
+                        {
+                            euler.x = Mathf.Atan2(Row2[1], Row1[1]);
+                            euler.y = Mathf.Atan2(Row0[2], Row0[0]);
+                            euler.z = Mathf.Asin(-sz);
+                        }
+                        else
+                        {
+                            // It's -1
+                            euler.x = -Mathf.Atan2(Row1[2], Row2[2]);
+                            euler.y = 0.0f;
+                            euler.z = Mathf.Tau / 4.0f;
+                        }
+                    }
+                    else
+                    {
+                        // It's 1
+                        euler.x = -Mathf.Atan2(Row1[2], Row2[2]);
+                        euler.y = 0.0f;
+                        euler.z = -Mathf.Tau / 4.0f;
+                    }
+                    return euler;
                 }
-            }
-            else
-            {
-                euler.x = -Mathf.Pi * 0.5f;
-                euler.y = -Mathf.Atan2(-m.Row0[1], m.Row0[0]);
-            }
+                case EulerOrder.Yxz:
+                {
+                    // Euler angles in YXZ convention.
+                    // See https://en.wikipedia.org/wiki/Euler_angles#Rotation_matrix
+                    //
+                    // rot =  cy*cz+sy*sx*sz    cz*sy*sx-cy*sz        cx*sy
+                    //        cx*sz             cx*cz                 -sx
+                    //        cy*sx*sz-cz*sy    cy*cz*sx+sy*sz        cy*cx
+                    Vector3 euler;
+                    real_t m12 = Row1[2];
+                    if (m12 < (1 - Mathf.Epsilon))
+                    {
+                        if (m12 > -(1 - Mathf.Epsilon))
+                        {
+                            // is this a pure X rotation?
+                            if (Row1[0] == 0 && Row0[1] == 0 && Row0[2] == 0 && Row2[0] == 0 && Row0[0] == 1)
+                            {
+                                // return the simplest form (human friendlier in editor and scripts)
+                                euler.x = Mathf.Atan2(-m12, Row1[1]);
+                                euler.y = 0;
+                                euler.z = 0;
+                            }
+                            else
+                            {
+                                euler.x = Mathf.Asin(-m12);
+                                euler.y = Mathf.Atan2(Row0[2], Row2[2]);
+                                euler.z = Mathf.Atan2(Row1[0], Row1[1]);
+                            }
+                        }
+                        else
+                        { // m12 == -1
+                            euler.x = Mathf.Tau / 4.0f;
+                            euler.y = Mathf.Atan2(Row0[1], Row0[0]);
+                            euler.z = 0;
+                        }
+                    }
+                    else
+                    { // m12 == 1
+                        euler.x = -Mathf.Tau / 4.0f;
+                        euler.y = -Mathf.Atan2(Row0[1], Row0[0]);
+                        euler.z = 0;
+                    }
 
-            return euler;
+                    return euler;
+                }
+                case EulerOrder.Yzx:
+                {
+                    // Euler angles in YZX convention.
+                    // See https://en.wikipedia.org/wiki/Euler_angles#Rotation_matrix
+                    //
+                    // rot =  cy*cz             sy*sx-cy*cx*sz     cx*sy+cy*sz*sx
+                    //        sz                cz*cx              -cz*sx
+                    //        -cz*sy            cy*sx+cx*sy*sz     cy*cx-sy*sz*sx
+                    Vector3 euler;
+                    real_t sz = Row1[0];
+                    if (sz < (1.0f - Mathf.Epsilon))
+                    {
+                        if (sz > -(1.0f - Mathf.Epsilon))
+                        {
+                            euler.x = Mathf.Atan2(-Row1[2], Row1[1]);
+                            euler.y = Mathf.Atan2(-Row2[0], Row0[0]);
+                            euler.z = Mathf.Asin(sz);
+                        }
+                        else
+                        {
+                            // It's -1
+                            euler.x = Mathf.Atan2(Row2[1], Row2[2]);
+                            euler.y = 0.0f;
+                            euler.z = -Mathf.Tau / 4.0f;
+                        }
+                    }
+                    else
+                    {
+                        // It's 1
+                        euler.x = Mathf.Atan2(Row2[1], Row2[2]);
+                        euler.y = 0.0f;
+                        euler.z = Mathf.Tau / 4.0f;
+                    }
+                    return euler;
+                }
+                case EulerOrder.Zxy:
+                {
+                    // Euler angles in ZXY convention.
+                    // See https://en.wikipedia.org/wiki/Euler_angles#Rotation_matrix
+                    //
+                    // rot =  cz*cy-sz*sx*sy    -cx*sz                cz*sy+cy*sz*sx
+                    //        cy*sz+cz*sx*sy    cz*cx                 sz*sy-cz*cy*sx
+                    //        -cx*sy            sx                    cx*cy
+                    Vector3 euler;
+                    real_t sx = Row2[1];
+                    if (sx < (1.0f - Mathf.Epsilon))
+                    {
+                        if (sx > -(1.0f - Mathf.Epsilon))
+                        {
+                            euler.x = Mathf.Asin(sx);
+                            euler.y = Mathf.Atan2(-Row2[0], Row2[2]);
+                            euler.z = Mathf.Atan2(-Row0[1], Row1[1]);
+                        }
+                        else
+                        {
+                            // It's -1
+                            euler.x = -Mathf.Tau / 4.0f;
+                            euler.y = Mathf.Atan2(Row0[2], Row0[0]);
+                            euler.z = 0;
+                        }
+                    }
+                    else
+                    {
+                        // It's 1
+                        euler.x = Mathf.Tau / 4.0f;
+                        euler.y = Mathf.Atan2(Row0[2], Row0[0]);
+                        euler.z = 0;
+                    }
+                    return euler;
+                }
+                case EulerOrder.Zyx:
+                {
+                    // Euler angles in ZYX convention.
+                    // See https://en.wikipedia.org/wiki/Euler_angles#Rotation_matrix
+                    //
+                    // rot =  cz*cy             cz*sy*sx-cx*sz        sz*sx+cz*cx*cy
+                    //        cy*sz             cz*cx+sz*sy*sx        cx*sz*sy-cz*sx
+                    //        -sy               cy*sx                 cy*cx
+                    Vector3 euler;
+                    real_t sy = Row2[0];
+                    if (sy < (1.0f - Mathf.Epsilon))
+                    {
+                        if (sy > -(1.0f - Mathf.Epsilon))
+                        {
+                            euler.x = Mathf.Atan2(Row2[1], Row2[2]);
+                            euler.y = Mathf.Asin(-sy);
+                            euler.z = Mathf.Atan2(Row1[0], Row0[0]);
+                        }
+                        else
+                        {
+                            // It's -1
+                            euler.x = 0;
+                            euler.y = Mathf.Tau / 4.0f;
+                            euler.z = -Mathf.Atan2(Row0[1], Row1[1]);
+                        }
+                    }
+                    else
+                    {
+                        // It's 1
+                        euler.x = 0;
+                        euler.y = -Mathf.Tau / 4.0f;
+                        euler.z = -Mathf.Atan2(Row0[1], Row1[1]);
+                    }
+                    return euler;
+                }
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(order));
+            }
         }
 
         /// <summary>
         /// Returns the basis's rotation in the form of a quaternion.
-        /// See <see cref="GetEuler()"/> if you need Euler angles, but keep in
+        /// See <see cref="GetEuler"/> if you need Euler angles, but keep in
         /// mind that quaternions should generally be preferred to Euler angles.
         /// </summary>
         /// <returns>A <see cref="Quaternion"/> representing the basis's rotation.</returns>
-        internal Quaternion GetQuaternion()
+        internal readonly Quaternion GetQuaternion()
         {
             real_t trace = Row0[0] + Row1[1] + Row2[2];
 
@@ -352,7 +558,7 @@ namespace Godot
         /// be preferred to Euler angles.
         /// </summary>
         /// <returns>The basis rotation.</returns>
-        public Quaternion GetRotationQuaternion()
+        public readonly Quaternion GetRotationQuaternion()
         {
             Basis orthonormalizedBasis = Orthonormalized();
             real_t det = orthonormalizedBasis.Determinant();
@@ -371,11 +577,11 @@ namespace Godot
         /// but are more efficient for some internal calculations.
         /// </summary>
         /// <param name="index">Which row.</param>
-        /// <exception cref="IndexOutOfRangeException">
-        /// Thrown when the <paramref name="index"/> is not 0, 1 or 2.
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// <paramref name="index"/> is not 0, 1 or 2.
         /// </exception>
         /// <returns>One of <c>Row0</c>, <c>Row1</c>, or <c>Row2</c>.</returns>
-        public Vector3 GetRow(int index)
+        public readonly Vector3 GetRow(int index)
         {
             switch (index)
             {
@@ -386,7 +592,7 @@ namespace Godot
                 case 2:
                     return Row2;
                 default:
-                    throw new IndexOutOfRangeException();
+                    throw new ArgumentOutOfRangeException(nameof(index));
             }
         }
 
@@ -396,8 +602,8 @@ namespace Godot
         /// </summary>
         /// <param name="index">Which row.</param>
         /// <param name="value">The vector to set the row to.</param>
-        /// <exception cref="IndexOutOfRangeException">
-        /// Thrown when the <paramref name="index"/> is not 0, 1 or 2.
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// <paramref name="index"/> is not 0, 1 or 2.
         /// </exception>
         public void SetRow(int index, Vector3 value)
         {
@@ -413,7 +619,7 @@ namespace Godot
                     Row2 = value;
                     return;
                 default:
-                    throw new IndexOutOfRangeException();
+                    throw new ArgumentOutOfRangeException(nameof(index));
             }
         }
 
@@ -427,7 +633,7 @@ namespace Godot
         /// For further details, refer to the Godot source code.
         /// </summary>
         /// <returns>The orthogonal index.</returns>
-        public int GetOrthogonalIndex()
+        public readonly int GetOrthogonalIndex()
         {
             var orth = this;
 
@@ -473,7 +679,7 @@ namespace Godot
         /// Returns the inverse of the matrix.
         /// </summary>
         /// <returns>The inverse matrix.</returns>
-        public Basis Inverse()
+        public readonly Basis Inverse()
         {
             real_t cofac00 = Row1[1] * Row2[2] - Row1[2] * Row2[1];
             real_t cofac10 = Row1[2] * Row2[0] - Row1[0] * Row2[2];
@@ -503,13 +709,22 @@ namespace Godot
             );
         }
 
+        internal readonly Basis Lerp(Basis to, real_t weight)
+        {
+            Basis b = this;
+            b.Row0 = Row0.Lerp(to.Row0, weight);
+            b.Row1 = Row1.Lerp(to.Row1, weight);
+            b.Row2 = Row2.Lerp(to.Row2, weight);
+            return b;
+        }
+
         /// <summary>
         /// Returns the orthonormalized version of the basis matrix (useful to
         /// call occasionally to avoid rounding errors for orthogonal matrices).
         /// This performs a Gram-Schmidt orthonormalization on the basis of the matrix.
         /// </summary>
         /// <returns>An orthonormalized basis matrix.</returns>
-        public Basis Orthonormalized()
+        public readonly Basis Orthonormalized()
         {
             Vector3 column0 = this[0];
             Vector3 column1 = this[1];
@@ -531,7 +746,7 @@ namespace Godot
         /// <param name="axis">The axis to rotate around. Must be normalized.</param>
         /// <param name="angle">The angle to rotate, in radians.</param>
         /// <returns>The rotated basis matrix.</returns>
-        public Basis Rotated(Vector3 axis, real_t angle)
+        public readonly Basis Rotated(Vector3 axis, real_t angle)
         {
             return new Basis(axis, angle) * this;
         }
@@ -541,7 +756,7 @@ namespace Godot
         /// </summary>
         /// <param name="scale">The scale to introduce.</param>
         /// <returns>The scaled basis matrix.</returns>
-        public Basis Scaled(Vector3 scale)
+        public readonly Basis Scaled(Vector3 scale)
         {
             Basis b = this;
             b.Row0 *= scale.x;
@@ -557,7 +772,7 @@ namespace Godot
         /// <param name="target">The destination basis for interpolation.</param>
         /// <param name="weight">A value on the range of 0.0 to 1.0, representing the amount of interpolation.</param>
         /// <returns>The resulting basis matrix of the interpolation.</returns>
-        public Basis Slerp(Basis target, real_t weight)
+        public readonly Basis Slerp(Basis target, real_t weight)
         {
             Quaternion from = new Quaternion(this);
             Quaternion to = new Quaternion(target);
@@ -575,7 +790,7 @@ namespace Godot
         /// </summary>
         /// <param name="with">A vector to calculate the dot product with.</param>
         /// <returns>The resulting dot product.</returns>
-        public real_t Tdotx(Vector3 with)
+        public readonly real_t Tdotx(Vector3 with)
         {
             return Row0[0] * with[0] + Row1[0] * with[1] + Row2[0] * with[2];
         }
@@ -585,7 +800,7 @@ namespace Godot
         /// </summary>
         /// <param name="with">A vector to calculate the dot product with.</param>
         /// <returns>The resulting dot product.</returns>
-        public real_t Tdoty(Vector3 with)
+        public readonly real_t Tdoty(Vector3 with)
         {
             return Row0[1] * with[0] + Row1[1] * with[1] + Row2[1] * with[2];
         }
@@ -595,7 +810,7 @@ namespace Godot
         /// </summary>
         /// <param name="with">A vector to calculate the dot product with.</param>
         /// <returns>The resulting dot product.</returns>
-        public real_t Tdotz(Vector3 with)
+        public readonly real_t Tdotz(Vector3 with)
         {
             return Row0[2] * with[0] + Row1[2] * with[1] + Row2[2] * with[2];
         }
@@ -604,58 +819,20 @@ namespace Godot
         /// Returns the transposed version of the basis matrix.
         /// </summary>
         /// <returns>The transposed basis matrix.</returns>
-        public Basis Transposed()
+        public readonly Basis Transposed()
         {
             Basis tr = this;
 
-            real_t temp = tr.Row0[1];
-            tr.Row0[1] = tr.Row1[0];
-            tr.Row1[0] = temp;
+            tr.Row0[1] = Row1[0];
+            tr.Row1[0] = Row0[1];
 
-            temp = tr.Row0[2];
-            tr.Row0[2] = tr.Row2[0];
-            tr.Row2[0] = temp;
+            tr.Row0[2] = Row2[0];
+            tr.Row2[0] = Row0[2];
 
-            temp = tr.Row1[2];
-            tr.Row1[2] = tr.Row2[1];
-            tr.Row2[1] = temp;
+            tr.Row1[2] = Row2[1];
+            tr.Row2[1] = Row1[2];
 
             return tr;
-        }
-
-        /// <summary>
-        /// Returns a vector transformed (multiplied) by the basis matrix.
-        /// </summary>
-        /// <seealso cref="XformInv(Vector3)"/>
-        /// <param name="v">A vector to transform.</param>
-        /// <returns>The transformed vector.</returns>
-        public Vector3 Xform(Vector3 v)
-        {
-            return new Vector3
-            (
-                Row0.Dot(v),
-                Row1.Dot(v),
-                Row2.Dot(v)
-            );
-        }
-
-        /// <summary>
-        /// Returns a vector transformed (multiplied) by the transposed basis matrix.
-        ///
-        /// Note: This results in a multiplication by the inverse of the
-        /// basis matrix only if it represents a rotation-reflection.
-        /// </summary>
-        /// <seealso cref="Xform(Vector3)"/>
-        /// <param name="v">A vector to inversely transform.</param>
-        /// <returns>The inversely transformed vector.</returns>
-        public Vector3 XformInv(Vector3 v)
-        {
-            return new Vector3
-            (
-                Row0[0] * v.x + Row1[0] * v.y + Row2[0] * v.z,
-                Row0[1] * v.x + Row1[1] * v.y + Row2[1] * v.z,
-                Row0[2] * v.x + Row1[2] * v.y + Row2[2] * v.z
-            );
         }
 
         private static readonly Basis[] _orthoBases = {
@@ -740,35 +917,6 @@ namespace Godot
         }
 
         /// <summary>
-        /// Constructs a pure rotation basis matrix from the given Euler angles
-        /// (in the YXZ convention: when *composing*, first Y, then X, and Z last),
-        /// given in the vector format as (X angle, Y angle, Z angle).
-        ///
-        /// Consider using the <see cref="Basis(Quaternion)"/> constructor instead, which
-        /// uses a <see cref="Quaternion"/> quaternion instead of Euler angles.
-        /// </summary>
-        /// <param name="eulerYXZ">The Euler angles to create the basis from.</param>
-        public Basis(Vector3 eulerYXZ)
-        {
-            real_t c;
-            real_t s;
-
-            c = Mathf.Cos(eulerYXZ.x);
-            s = Mathf.Sin(eulerYXZ.x);
-            var xmat = new Basis(1, 0, 0, 0, c, -s, 0, s, c);
-
-            c = Mathf.Cos(eulerYXZ.y);
-            s = Mathf.Sin(eulerYXZ.y);
-            var ymat = new Basis(c, 0, s, 0, 1, 0, -s, 0, c);
-
-            c = Mathf.Cos(eulerYXZ.z);
-            s = Mathf.Sin(eulerYXZ.z);
-            var zmat = new Basis(c, -s, 0, s, c, 0, 0, 0, 1);
-
-            this = ymat * xmat * zmat;
-        }
-
-        /// <summary>
         /// Constructs a pure rotation basis matrix, rotated around the given <paramref name="axis"/>
         /// by <paramref name="angle"/> (in radians). The axis must be a normalized vector.
         /// </summary>
@@ -828,6 +976,46 @@ namespace Godot
         }
 
         /// <summary>
+        /// Constructs a Basis matrix from Euler angles in the specified rotation order. By default, use YXZ order (most common).
+        /// </summary>
+        /// <param name="euler">The Euler angles to use.</param>
+        /// <param name="order">The order to compose the Euler angles.</param>
+        public static Basis FromEuler(Vector3 euler, EulerOrder order = EulerOrder.Yxz)
+        {
+            real_t c, s;
+
+            c = Mathf.Cos(euler.x);
+            s = Mathf.Sin(euler.x);
+            Basis xmat = new Basis(new Vector3(1, 0, 0), new Vector3(0, c, s), new Vector3(0, -s, c));
+
+            c = Mathf.Cos(euler.y);
+            s = Mathf.Sin(euler.y);
+            Basis ymat = new Basis(new Vector3(c, 0, -s), new Vector3(0, 1, 0), new Vector3(s, 0, c));
+
+            c = Mathf.Cos(euler.z);
+            s = Mathf.Sin(euler.z);
+            Basis zmat = new Basis(new Vector3(c, s, 0), new Vector3(-s, c, 0), new Vector3(0, 0, 1));
+
+            switch (order)
+            {
+                case EulerOrder.Xyz:
+                    return xmat * ymat * zmat;
+                case EulerOrder.Xzy:
+                    return xmat * zmat * ymat;
+                case EulerOrder.Yxz:
+                    return ymat * xmat * zmat;
+                case EulerOrder.Yzx:
+                    return ymat * zmat * xmat;
+                case EulerOrder.Zxy:
+                    return zmat * xmat * ymat;
+                case EulerOrder.Zyx:
+                    return zmat * ymat * xmat;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(order));
+            }
+        }
+
+        /// <summary>
         /// Constructs a pure scale basis matrix with no rotation or shearing.
         /// The scale values are set as the main diagonal of the matrix,
         /// and all of the other parts of the matrix are zero.
@@ -858,6 +1046,41 @@ namespace Godot
                 right.Tdotx(left.Row0), right.Tdoty(left.Row0), right.Tdotz(left.Row0),
                 right.Tdotx(left.Row1), right.Tdoty(left.Row1), right.Tdotz(left.Row1),
                 right.Tdotx(left.Row2), right.Tdoty(left.Row2), right.Tdotz(left.Row2)
+            );
+        }
+
+        /// <summary>
+        /// Returns a Vector3 transformed (multiplied) by the basis matrix.
+        /// </summary>
+        /// <param name="basis">The basis matrix transformation to apply.</param>
+        /// <param name="vector">A Vector3 to transform.</param>
+        /// <returns>The transformed Vector3.</returns>
+        public static Vector3 operator *(Basis basis, Vector3 vector)
+        {
+            return new Vector3
+            (
+                basis.Row0.Dot(vector),
+                basis.Row1.Dot(vector),
+                basis.Row2.Dot(vector)
+            );
+        }
+
+        /// <summary>
+        /// Returns a Vector3 transformed (multiplied) by the transposed basis matrix.
+        ///
+        /// Note: This results in a multiplication by the inverse of the
+        /// basis matrix only if it represents a rotation-reflection.
+        /// </summary>
+        /// <param name="vector">A Vector3 to inversely transform.</param>
+        /// <param name="basis">The basis matrix transformation to apply.</param>
+        /// <returns>The inversely transformed vector.</returns>
+        public static Vector3 operator *(Vector3 vector, Basis basis)
+        {
+            return new Vector3
+            (
+                basis.Row0[0] * vector.x + basis.Row1[0] * vector.y + basis.Row2[0] * vector.z,
+                basis.Row0[1] * vector.x + basis.Row1[1] * vector.y + basis.Row2[1] * vector.z,
+                basis.Row0[2] * vector.x + basis.Row1[2] * vector.y + basis.Row2[2] * vector.z
             );
         }
 
@@ -895,14 +1118,9 @@ namespace Godot
         /// </summary>
         /// <param name="obj">The object to compare with.</param>
         /// <returns>Whether or not the basis matrix and the object are exactly equal.</returns>
-        public override bool Equals(object obj)
+        public override readonly bool Equals(object obj)
         {
-            if (obj is Basis)
-            {
-                return Equals((Basis)obj);
-            }
-
-            return false;
+            return obj is Basis other && Equals(other);
         }
 
         /// <summary>
@@ -912,7 +1130,7 @@ namespace Godot
         /// </summary>
         /// <param name="other">The other basis.</param>
         /// <returns>Whether or not the basis matrices are exactly equal.</returns>
-        public bool Equals(Basis other)
+        public readonly bool Equals(Basis other)
         {
             return Row0.Equals(other.Row0) && Row1.Equals(other.Row1) && Row2.Equals(other.Row2);
         }
@@ -923,7 +1141,7 @@ namespace Godot
         /// </summary>
         /// <param name="other">The other basis to compare.</param>
         /// <returns>Whether or not the bases are approximately equal.</returns>
-        public bool IsEqualApprox(Basis other)
+        public readonly bool IsEqualApprox(Basis other)
         {
             return Row0.IsEqualApprox(other.Row0) && Row1.IsEqualApprox(other.Row1) && Row2.IsEqualApprox(other.Row2);
         }
@@ -932,7 +1150,7 @@ namespace Godot
         /// Serves as the hash function for <see cref="Basis"/>.
         /// </summary>
         /// <returns>A hash code for this basis.</returns>
-        public override int GetHashCode()
+        public override readonly int GetHashCode()
         {
             return Row0.GetHashCode() ^ Row1.GetHashCode() ^ Row2.GetHashCode();
         }
@@ -941,7 +1159,7 @@ namespace Godot
         /// Converts this <see cref="Basis"/> to a string.
         /// </summary>
         /// <returns>A string representation of this basis.</returns>
-        public override string ToString()
+        public override readonly string ToString()
         {
             return $"[X: {x}, Y: {y}, Z: {z}]";
         }
@@ -950,7 +1168,7 @@ namespace Godot
         /// Converts this <see cref="Basis"/> to a string with the given <paramref name="format"/>.
         /// </summary>
         /// <returns>A string representation of this basis.</returns>
-        public string ToString(string format)
+        public readonly string ToString(string format)
         {
             return $"[X: {x.ToString(format)}, Y: {y.ToString(format)}, Z: {z.ToString(format)}]";
         }

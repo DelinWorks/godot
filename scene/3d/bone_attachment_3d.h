@@ -64,7 +64,7 @@ class BoneAttachment3D : public Node3D {
 	Skeleton3D *_get_skeleton3d();
 
 protected:
-	virtual void _validate_property(PropertyInfo &property) const override;
+	void _validate_property(PropertyInfo &p_property) const;
 	bool _get(const StringName &p_path, Variant &r_ret) const;
 	bool _set(const StringName &p_path, const Variant &p_value);
 	void _get_property_list(List<PropertyInfo> *p_list) const;
@@ -72,11 +72,11 @@ protected:
 
 	static void _bind_methods();
 #ifdef TOOLS_ENABLED
-	virtual void _notify_skeleton_bones_renamed(Node *p_base_scene, Skeleton3D *p_skeleton, Ref<BoneMap> p_bone_map);
+	virtual void _notify_skeleton_bones_renamed(Node *p_base_scene, Skeleton3D *p_skeleton, Dictionary p_rename_map);
 #endif // TOOLS_ENABLED
 
 public:
-	virtual TypedArray<String> get_configuration_warnings() const override;
+	virtual PackedStringArray get_configuration_warnings() const override;
 
 	void set_bone_name(const String &p_name);
 	String get_bone_name() const;

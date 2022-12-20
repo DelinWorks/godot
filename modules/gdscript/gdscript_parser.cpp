@@ -127,7 +127,7 @@ GDScriptParser::GDScriptParser() {
 	register_annotation(MethodInfo("@export_global_file", PropertyInfo(Variant::STRING, "filter")), AnnotationInfo::VARIABLE, &GDScriptParser::export_annotations<PROPERTY_HINT_GLOBAL_FILE, Variant::STRING>, varray(""), true);
 	register_annotation(MethodInfo("@export_global_dir"), AnnotationInfo::VARIABLE, &GDScriptParser::export_annotations<PROPERTY_HINT_GLOBAL_DIR, Variant::STRING>);
 	register_annotation(MethodInfo("@export_multiline"), AnnotationInfo::VARIABLE, &GDScriptParser::export_annotations<PROPERTY_HINT_MULTILINE_TEXT, Variant::STRING>);
-	register_annotation(MethodInfo("@export_placeholder"), AnnotationInfo::VARIABLE, &GDScriptParser::export_annotations<PROPERTY_HINT_PLACEHOLDER_TEXT, Variant::STRING>);
+	register_annotation(MethodInfo("@export_placeholder", PropertyInfo(Variant::STRING, "placeholder")), AnnotationInfo::VARIABLE, &GDScriptParser::export_annotations<PROPERTY_HINT_PLACEHOLDER_TEXT, Variant::STRING>);
 	register_annotation(MethodInfo("@export_range", PropertyInfo(Variant::FLOAT, "min"), PropertyInfo(Variant::FLOAT, "max"), PropertyInfo(Variant::FLOAT, "step"), PropertyInfo(Variant::STRING, "extra_hints")), AnnotationInfo::VARIABLE, &GDScriptParser::export_annotations<PROPERTY_HINT_RANGE, Variant::FLOAT>, varray(1.0, ""), true);
 	register_annotation(MethodInfo("@export_exp_easing", PropertyInfo(Variant::STRING, "hints")), AnnotationInfo::VARIABLE, &GDScriptParser::export_annotations<PROPERTY_HINT_EXP_EASING, Variant::FLOAT>, varray(""), true);
 	register_annotation(MethodInfo("@export_color_no_alpha"), AnnotationInfo::VARIABLE, &GDScriptParser::export_annotations<PROPERTY_HINT_COLOR_NO_ALPHA, Variant::COLOR>);
@@ -147,6 +147,10 @@ GDScriptParser::GDScriptParser() {
 	register_annotation(MethodInfo("@warning_ignore", PropertyInfo(Variant::STRING, "warning")), AnnotationInfo::CLASS | AnnotationInfo::VARIABLE | AnnotationInfo::SIGNAL | AnnotationInfo::CONSTANT | AnnotationInfo::FUNCTION | AnnotationInfo::STATEMENT, &GDScriptParser::warning_annotations, varray(), true);
 	// Networking.
 	register_annotation(MethodInfo("@rpc", PropertyInfo(Variant::STRING, "mode"), PropertyInfo(Variant::STRING, "sync"), PropertyInfo(Variant::STRING, "transfer_mode"), PropertyInfo(Variant::INT, "transfer_channel")), AnnotationInfo::FUNCTION, &GDScriptParser::rpc_annotation, varray("", "", "", 0), true);
+
+#ifdef DEBUG_ENABLED
+	is_ignoring_warnings = !(bool)GLOBAL_GET("debug/gdscript/warnings/enable");
+#endif
 }
 
 GDScriptParser::~GDScriptParser() {
@@ -230,7 +234,7 @@ void GDScriptParser::push_warning(const Node *p_source, GDScriptWarning::Code p_
 	warning.leftmost_column = p_source->leftmost_column;
 	warning.rightmost_column = p_source->rightmost_column;
 
-	if (warn_level == GDScriptWarning::WarnLevel::ERROR) {
+	if (warn_level == GDScriptWarning::WarnLevel::ERROR || bool(GLOBAL_GET("debug/gdscript/warnings/treat_warnings_as_errors"))) {
 		push_error(warning.get_message(), p_source);
 		return;
 	}
@@ -534,6 +538,7 @@ void GDScriptParser::end_statement(const String &p_context) {
 
 void GDScriptParser::parse_program() {
 	head = alloc_node<ClassNode>();
+	head->fqcn = script_path;
 	current_class = head;
 
 	// If we happen to parse an annotation before extends or class_name keywords, track it.
@@ -637,6 +642,53 @@ void GDScriptParser::parse_program() {
 	clear_unused_annotations();
 }
 
+GDScriptParser::ClassNode *GDScriptParser::find_class(const String &p_qualified_name) const {
+	String first = p_qualified_name.get_slice("::", 0);
+
+	Vector<String> class_names;
+	GDScriptParser::ClassNode *result = nullptr;
+	// Empty initial name means start at the head.
+	if (first.is_empty() || (head->identifier && first == head->identifier->name)) {
+		class_names = p_qualified_name.split("::");
+		result = head;
+	} else if (p_qualified_name.begins_with(script_path)) {
+		// Script path could have a class path separator("::") in it.
+		class_names = p_qualified_name.trim_prefix(script_path).split("::");
+		result = head;
+	} else if (head->has_member(first)) {
+		class_names = p_qualified_name.split("::");
+		GDScriptParser::ClassNode::Member member = head->get_member(first);
+		if (member.type == GDScriptParser::ClassNode::Member::CLASS) {
+			result = member.m_class;
+		}
+	}
+
+	// Starts at index 1 because index 0 was handled above.
+	for (int i = 1; result != nullptr && i < class_names.size(); i++) {
+		String current_name = class_names[i];
+		GDScriptParser::ClassNode *next = nullptr;
+		if (result->has_member(current_name)) {
+			GDScriptParser::ClassNode::Member member = result->get_member(current_name);
+			if (member.type == GDScriptParser::ClassNode::Member::CLASS) {
+				next = member.m_class;
+			}
+		}
+		result = next;
+	}
+
+	return result;
+}
+
+bool GDScriptParser::has_class(const GDScriptParser::ClassNode *p_class) const {
+	if (head->fqcn.is_empty() && p_class->fqcn.get_slice("::", 0).is_empty()) {
+		return p_class == head;
+	} else if (p_class->fqcn.begins_with(head->fqcn)) {
+		return find_class(p_class->fqcn.trim_prefix(head->fqcn)) == p_class;
+	}
+
+	return false;
+}
+
 GDScriptParser::ClassNode *GDScriptParser::parse_class() {
 	ClassNode *n_class = alloc_node<ClassNode>();
 
@@ -646,6 +698,15 @@ GDScriptParser::ClassNode *GDScriptParser::parse_class() {
 
 	if (consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected identifier for the class name after "class".)")) {
 		n_class->identifier = parse_identifier();
+		if (n_class->outer) {
+			String fqcn = n_class->outer->fqcn;
+			if (fqcn.is_empty()) {
+				fqcn = script_path;
+			}
+			n_class->fqcn = fqcn + "::" + n_class->identifier->name;
+		} else {
+			n_class->fqcn = n_class->identifier->name;
+		}
 	}
 
 	if (match(GDScriptTokenizer::Token::EXTENDS)) {
@@ -684,17 +745,7 @@ GDScriptParser::ClassNode *GDScriptParser::parse_class() {
 void GDScriptParser::parse_class_name() {
 	if (consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected identifier for the global class name after "class_name".)")) {
 		current_class->identifier = parse_identifier();
-	}
-
-	// TODO: Move this to annotation
-	if (match(GDScriptTokenizer::Token::COMMA)) {
-		// Icon path.
-		if (consume(GDScriptTokenizer::Token::LITERAL, R"(Expected class icon path string after ",".)")) {
-			if (previous.literal.get_type() != Variant::STRING) {
-				push_error(vformat(R"(Only strings can be used for the class icon path, found "%s" instead.)", Variant::get_type_name(previous.literal.get_type())));
-			}
-			current_class->icon_path = previous.literal;
-		}
+		current_class->fqcn = String(current_class->identifier->name);
 	}
 
 	if (match(GDScriptTokenizer::Token::EXTENDS)) {
@@ -1541,7 +1592,7 @@ GDScriptParser::SuiteNode *GDScriptParser::parse_suite(const String &p_context, 
 				VariableNode *variable = static_cast<VariableNode *>(statement);
 				const SuiteNode::Local &local = current_suite->get_local(variable->identifier->name);
 				if (local.type != SuiteNode::Local::UNDEFINED) {
-					push_error(vformat(R"(There is already a %s named "%s" declared in this scope.)", local.get_name(), variable->identifier->name));
+					push_error(vformat(R"(There is already a %s named "%s" declared in this scope.)", local.get_name(), variable->identifier->name), variable->identifier);
 				}
 				current_suite->add_local(variable, current_function);
 				break;
@@ -1556,7 +1607,7 @@ GDScriptParser::SuiteNode *GDScriptParser::parse_suite(const String &p_context, 
 					} else {
 						name = "variable";
 					}
-					push_error(vformat(R"(There is already a %s named "%s" declared in this scope.)", name, constant->identifier->name));
+					push_error(vformat(R"(There is already a %s named "%s" declared in this scope.)", name, constant->identifier->name), constant->identifier);
 				}
 				current_suite->add_local(constant, current_function);
 				break;
@@ -1831,9 +1882,9 @@ GDScriptParser::ForNode *GDScriptParser::parse_for() {
 		}
 		suite->add_local(SuiteNode::Local(n_for->variable, current_function));
 	}
-	suite->parent_for = n_for;
 
 	n_for->loop = parse_suite(R"("for" block)", suite);
+	n_for->loop->is_loop = true;
 	complete_extents(n_for);
 
 	// Reset break/continue state.
@@ -2165,6 +2216,7 @@ GDScriptParser::WhileNode *GDScriptParser::parse_while() {
 	is_continue_match = false;
 
 	n_while->loop = parse_suite(R"("while" block)");
+	n_while->loop->is_loop = true;
 	complete_extents(n_while);
 
 	// Reset break/continue state.
@@ -2235,7 +2287,7 @@ GDScriptParser::IdentifierNode *GDScriptParser::parse_identifier() {
 
 GDScriptParser::ExpressionNode *GDScriptParser::parse_identifier(ExpressionNode *p_previous_operand, bool p_can_assign) {
 	if (!previous.is_identifier()) {
-		ERR_FAIL_V_MSG(nullptr, "Parser bug: parsing literal node without literal token.");
+		ERR_FAIL_V_MSG(nullptr, "Parser bug: parsing identifier node without identifier token.");
 	}
 	IdentifierNode *identifier = alloc_node<IdentifierNode>();
 	complete_extents(identifier);
@@ -2943,11 +2995,16 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_call(ExpressionNode *p_pre
 			// Allow for trailing comma.
 			break;
 		}
+		bool use_identifier_completion = current.cursor_place == GDScriptTokenizer::CURSOR_END || current.cursor_place == GDScriptTokenizer::CURSOR_MIDDLE;
 		ExpressionNode *argument = parse_expression(false);
 		if (argument == nullptr) {
 			push_error(R"(Expected expression as the function argument.)");
 		} else {
 			call->arguments.push_back(argument);
+
+			if (argument->type == Node::IDENTIFIER && use_identifier_completion) {
+				completion_context.type = COMPLETION_IDENTIFIER;
+			}
 		}
 		ct = COMPLETION_CALL_ARGUMENTS;
 	} while (match(GDScriptTokenizer::Token::COMMA));
@@ -3731,6 +3788,12 @@ bool GDScriptParser::export_annotations(const AnnotationNode *p_annotation, Node
 	// This is called after the analyzer is done finding the type, so this should be set here.
 	DataType export_type = variable->get_datatype();
 
+	if (p_annotation->name == SNAME("@export_range")) {
+		if (export_type.builtin_type == Variant::INT) {
+			variable->export_info.type = Variant::INT;
+		}
+	}
+
 	if (p_annotation->name == SNAME("@export")) {
 		if (variable->datatype_specifier == nullptr && variable->initializer == nullptr) {
 			push_error(R"(Cannot use simple "@export" annotation with variable without type or initializer, since type can't be inferred.)", p_annotation);
@@ -3769,13 +3832,48 @@ bool GDScriptParser::export_annotations(const AnnotationNode *p_annotation, Node
 					return false;
 				}
 				break;
+			case GDScriptParser::DataType::CLASS:
+				if (ClassDB::is_parent_class(export_type.native_type, SNAME("Resource"))) {
+					variable->export_info.type = Variant::OBJECT;
+					variable->export_info.hint = PROPERTY_HINT_RESOURCE_TYPE;
+					variable->export_info.hint_string = export_type.to_string();
+				} else if (ClassDB::is_parent_class(export_type.native_type, SNAME("Node"))) {
+					variable->export_info.type = Variant::OBJECT;
+					variable->export_info.hint = PROPERTY_HINT_NODE_TYPE;
+					variable->export_info.hint_string = export_type.to_string();
+				} else {
+					push_error(R"(Export type can only be built-in, a resource, a node or an enum.)", variable);
+					return false;
+				}
+
+				break;
+			case GDScriptParser::DataType::SCRIPT: {
+				StringName class_name;
+				StringName native_base;
+				if (export_type.script_type.is_valid()) {
+					class_name = export_type.script_type->get_language()->get_global_class_name(export_type.script_type->get_path());
+					native_base = export_type.script_type->get_instance_base_type();
+				}
+				if (class_name == StringName()) {
+					Ref<Script> script = ResourceLoader::load(export_type.script_path, SNAME("Script"));
+					if (script.is_valid()) {
+						class_name = script->get_language()->get_global_class_name(export_type.script_path);
+						native_base = script->get_instance_base_type();
+					}
+				}
+				if (class_name != StringName() && native_base != StringName() && ClassDB::is_parent_class(native_base, SNAME("Resource"))) {
+					variable->export_info.type = Variant::OBJECT;
+					variable->export_info.hint = PROPERTY_HINT_RESOURCE_TYPE;
+					variable->export_info.hint_string = class_name;
+				}
+			} break;
 			case GDScriptParser::DataType::ENUM: {
 				variable->export_info.type = Variant::INT;
 				variable->export_info.hint = PROPERTY_HINT_ENUM;
 
 				String enum_hint_string;
 				bool first = true;
-				for (const KeyValue<StringName, int> &E : export_type.enum_values) {
+				for (const KeyValue<StringName, int64_t> &E : export_type.enum_values) {
 					if (!first) {
 						enum_hint_string += ",";
 					} else {
@@ -3932,28 +4030,22 @@ GDScriptParser::DataType GDScriptParser::SuiteNode::Local::get_datatype() const 
 }
 
 String GDScriptParser::SuiteNode::Local::get_name() const {
-	String name;
 	switch (type) {
 		case SuiteNode::Local::PARAMETER:
-			name = "parameter";
-			break;
+			return "parameter";
 		case SuiteNode::Local::CONSTANT:
-			name = "constant";
-			break;
+			return "constant";
 		case SuiteNode::Local::VARIABLE:
-			name = "variable";
-			break;
+			return "variable";
 		case SuiteNode::Local::FOR_VARIABLE:
-			name = "for loop iterator";
-			break;
+			return "for loop iterator";
 		case SuiteNode::Local::PATTERN_BIND:
-			name = "pattern_bind";
-			break;
+			return "pattern_bind";
 		case SuiteNode::Local::UNDEFINED:
-			name = "<undefined>";
-			break;
+			return "<undefined>";
+		default:
+			return String();
 	}
-	return name;
 }
 
 String GDScriptParser::DataType::to_string() const {
@@ -3985,7 +4077,7 @@ String GDScriptParser::DataType::to_string() const {
 			if (is_meta_type) {
 				return script_type->get_class_name().operator String();
 			}
-			String name = script_type->get_name();
+			String name = script_type != nullptr ? script_type->get_name() : "";
 			if (!name.is_empty()) {
 				return name;
 			}
@@ -3997,11 +4089,12 @@ String GDScriptParser::DataType::to_string() const {
 		}
 		case ENUM:
 			return enum_type.operator String() + " (enum)";
+		case RESOLVING:
 		case UNRESOLVED:
 			return "<unresolved type>";
 	}
 
-	ERR_FAIL_V_MSG("<unresolved type", "Kind set outside the enum range.");
+	ERR_FAIL_V_MSG("<unresolved type>", "Kind set outside the enum range.");
 }
 
 static Variant::Type _variant_type_to_typed_array_element_type(Variant::Type p_type) {

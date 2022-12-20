@@ -33,6 +33,7 @@
 #include "canvas_item_editor_plugin.h"
 #include "core/os/keyboard.h"
 #include "editor/editor_node.h"
+#include "editor/editor_undo_redo_manager.h"
 #include "scene/resources/capsule_shape_2d.h"
 #include "scene/resources/circle_shape_2d.h"
 #include "scene/resources/concave_polygon_shape_2d.h"
@@ -218,6 +219,7 @@ void CollisionShape2DEditor::set_handle(int idx, Point2 &p_point) {
 }
 
 void CollisionShape2DEditor::commit_handle(int idx, Variant &p_org) {
+	Ref<EditorUndoRedoManager> &undo_redo = EditorNode::get_undo_redo();
 	undo_redo->create_action(TTR("Set Handle"));
 
 	switch (shape_type) {
@@ -586,8 +588,6 @@ void CollisionShape2DEditor::_bind_methods() {
 CollisionShape2DEditor::CollisionShape2DEditor() {
 	node = nullptr;
 	canvas_item_editor = nullptr;
-
-	undo_redo = EditorNode::get_singleton()->get_undo_redo();
 
 	edit_handle = -1;
 	pressed = false;

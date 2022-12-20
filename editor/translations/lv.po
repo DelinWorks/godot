@@ -4570,6 +4570,7 @@ msgstr ""
 
 #: editor/editor_node.cpp editor/project_manager.cpp
 #: editor/script_create_dialog.cpp modules/mono/editor/csharp_project.cpp
+#: modules/mono/godotsharp_dirs.cpp
 msgid "Project"
 msgstr "Projekts"
 
@@ -7384,7 +7385,8 @@ msgid "8 Bit"
 msgstr ""
 
 #: editor/import/resource_importer_wav.cpp main/main.cpp
-#: modules/mono/editor/csharp_project.cpp modules/mono/mono_gd/gd_mono.cpp
+#: modules/mono/editor/csharp_project.cpp modules/mono/godotsharp_dirs.cpp
+#: modules/mono/mono_gd/gd_mono.cpp
 msgid "Mono"
 msgstr ""
 
@@ -12806,9 +12808,10 @@ msgstr "Opcijas"
 #: scene/2d/path_2d.cpp scene/2d/polygon_2d.cpp scene/2d/sprite.cpp
 #: scene/3d/cpu_particles.cpp scene/3d/label_3d.cpp scene/3d/path.cpp
 #: scene/3d/physics_body.cpp scene/3d/soft_body.cpp scene/3d/sprite_3d.cpp
-#: scene/gui/graph_node.cpp scene/gui/rich_text_effect.cpp
-#: scene/main/canvas_layer.cpp scene/resources/material.cpp
-#: scene/resources/particles_material.cpp scene/resources/style_box.cpp
+#: scene/3d/visual_instance.cpp scene/gui/graph_node.cpp
+#: scene/gui/rich_text_effect.cpp scene/main/canvas_layer.cpp
+#: scene/resources/material.cpp scene/resources/particles_material.cpp
+#: scene/resources/style_box.cpp
 msgid "Offset"
 msgstr ""
 
@@ -14174,12 +14177,11 @@ msgstr ""
 
 #: editor/project_manager.cpp
 msgid ""
-"Couldn't load project.godot in project path (error %d). It may be missing or "
-"corrupted."
+"Couldn't load project at '%s' (error %d). It may be missing or corrupted."
 msgstr ""
 
 #: editor/project_manager.cpp
-msgid "Couldn't edit project.godot in project path."
+msgid "Couldn't save project at '%s' (error %d)."
 msgstr ""
 
 #: editor/project_manager.cpp
@@ -15138,18 +15140,18 @@ msgstr ""
 msgid "Make Local"
 msgstr ""
 
-#: editor/scene_tree_dock.cpp editor/scene_tree_editor.cpp
-msgid "Another node already uses this unique name in the scene."
+#: editor/scene_tree_dock.cpp
+#, fuzzy
+msgid "Enable Scene Unique Name(s)"
+msgstr "Mezgla Vārds:"
+
+#: editor/scene_tree_dock.cpp
+msgid "Unique names already used by another node in the scene:"
 msgstr ""
 
 #: editor/scene_tree_dock.cpp
 #, fuzzy
-msgid "Enable Scene Unique Name"
-msgstr "Mezgla Vārds:"
-
-#: editor/scene_tree_dock.cpp editor/scene_tree_editor.cpp
-#, fuzzy
-msgid "Disable Scene Unique Name"
+msgid "Disable Scene Unique Name(s)"
 msgstr "Mezgla Vārds:"
 
 #: editor/scene_tree_dock.cpp
@@ -15339,6 +15341,11 @@ msgid "Button Group"
 msgstr ""
 
 #: editor/scene_tree_editor.cpp
+#, fuzzy
+msgid "Disable Scene Unique Name"
+msgstr "Mezgla Vārds:"
+
+#: editor/scene_tree_editor.cpp
 msgid "(Connecting From)"
 msgstr "(Savienojas No)"
 
@@ -15401,6 +15408,10 @@ msgstr ""
 
 #: editor/scene_tree_editor.cpp
 msgid "Invalid node name, the following characters are not allowed:"
+msgstr ""
+
+#: editor/scene_tree_editor.cpp
+msgid "Another node already uses this unique name in the scene."
 msgstr ""
 
 #: editor/scene_tree_editor.cpp
@@ -17268,6 +17279,21 @@ msgstr "Būvēt risinājumu"
 msgid "Auto Update Project"
 msgstr "Nenosaukts Projekts"
 
+#: modules/mono/godotsharp_dirs.cpp
+#, fuzzy
+msgid "Assembly Name"
+msgstr "Parādīt Visu"
+
+#: modules/mono/godotsharp_dirs.cpp
+#, fuzzy
+msgid "Solution Directory"
+msgstr "Izvēlēties Direktoriju"
+
+#: modules/mono/godotsharp_dirs.cpp
+#, fuzzy
+msgid "C# Project Directory"
+msgstr "Izvēlēties Direktoriju"
+
 #: modules/mono/mono_gd/gd_mono_utils.cpp
 msgid "End of inner exception stack trace"
 msgstr ""
@@ -19049,6 +19075,11 @@ msgstr "Izgriezt mezglu(s)"
 msgid "Custom BG Color"
 msgstr "Izgriezt mezglu(s)"
 
+#: platform/iphone/export/export.cpp
+#, fuzzy
+msgid "Export Icons"
+msgstr "Izvērst apakšējo paneli"
+
 #: platform/iphone/export/export.cpp platform/javascript/export/export.cpp
 #: platform/osx/export/export.cpp
 #, fuzzy
@@ -19883,6 +19914,12 @@ msgstr ""
 
 #: platform/uwp/export/export.cpp
 msgid "Show Name On Square 310 X 310"
+msgstr ""
+
+#: platform/uwp/export/export.cpp
+msgid ""
+"Godot's Mono version does not support the UWP platform. Use the standard "
+"build (no C# support) if you wish to target UWP."
 msgstr ""
 
 #: platform/uwp/export/export.cpp
@@ -23175,6 +23212,15 @@ msgstr "%s Kļūda"
 
 #: scene/3d/visibility_notifier.cpp
 msgid "AABB"
+msgstr ""
+
+#: scene/3d/visual_instance.cpp
+#, fuzzy
+msgid "Sorting"
+msgstr "Šķirot"
+
+#: scene/3d/visual_instance.cpp
+msgid "Use AABB Center"
 msgstr ""
 
 #: scene/3d/visual_instance.cpp scene/resources/navigation_mesh.cpp

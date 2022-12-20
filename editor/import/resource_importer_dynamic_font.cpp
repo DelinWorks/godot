@@ -76,6 +76,9 @@ bool ResourceImporterDynamicFont::get_option_visibility(const String &p_path, co
 	if (p_option == "msdf_size" && !bool(p_options["multichannel_signed_distance_field"])) {
 		return false;
 	}
+	if (p_option == "antialiasing" && bool(p_options["multichannel_signed_distance_field"])) {
+		return false;
+	}
 	if (p_option == "oversampling" && bool(p_options["multichannel_signed_distance_field"])) {
 		return false;
 	}
@@ -105,19 +108,20 @@ void ResourceImporterDynamicFont::get_import_options(const String &p_path, List<
 
 	r_options->push_back(ImportOption(PropertyInfo(Variant::NIL, "Rendering", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_GROUP), Variant()));
 
-	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "antialiased"), true));
+	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "antialiasing", PROPERTY_HINT_ENUM, "None,Grayscale,LCD Subpixel"), 1));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "generate_mipmaps"), false));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "multichannel_signed_distance_field", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED), (msdf) ? true : false));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "msdf_pixel_range", PROPERTY_HINT_RANGE, "1,100,1"), 8));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "msdf_size", PROPERTY_HINT_RANGE, "1,250,1"), 48));
 
+	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "allow_system_fallback"), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "force_autohinter"), false));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "hinting", PROPERTY_HINT_ENUM, "None,Light,Normal"), 1));
-	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "subpixel_positioning", PROPERTY_HINT_ENUM, "Disabled,Auto,One half of a pixel,One quarter of a pixel"), 1));
+	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "subpixel_positioning", PROPERTY_HINT_ENUM, "Disabled,Auto,One Half of a Pixel,One Quarter of a Pixel"), 1));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::FLOAT, "oversampling", PROPERTY_HINT_RANGE, "0,10,0.1"), 0.0));
 
 	r_options->push_back(ImportOption(PropertyInfo(Variant::NIL, "Fallbacks", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_GROUP), Variant()));
-	r_options->push_back(ImportOption(PropertyInfo(Variant::ARRAY, "fallbacks", PROPERTY_HINT_ARRAY_TYPE, vformat("%s/%s:%s", Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE, "Font")), Array()));
+	r_options->push_back(ImportOption(PropertyInfo(Variant::ARRAY, "fallbacks", PROPERTY_HINT_ARRAY_TYPE, MAKE_RESOURCE_TYPE_HINT("Font")), Array()));
 
 	r_options->push_back(ImportOption(PropertyInfo(Variant::NIL, "Compress", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_GROUP), Variant()));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "compress"), true));
@@ -139,7 +143,7 @@ void ResourceImporterDynamicFont::show_advanced_options(const String &p_path) {
 Error ResourceImporterDynamicFont::import(const String &p_source_file, const String &p_save_path, const HashMap<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata) {
 	print_verbose("Importing dynamic font from: " + p_source_file);
 
-	bool antialiased = p_options["antialiased"];
+	int antialiasing = p_options["antialiasing"];
 	bool generate_mipmaps = p_options["generate_mipmaps"];
 	bool msdf = p_options["multichannel_signed_distance_field"];
 	int px_range = p_options["msdf_pixel_range"];
@@ -147,19 +151,20 @@ Error ResourceImporterDynamicFont::import(const String &p_source_file, const Str
 	Dictionary ot_ov = p_options["opentype_features"];
 
 	bool autohinter = p_options["force_autohinter"];
+	bool allow_system_fallback = p_options["allow_system_fallback"];
 	int hinting = p_options["hinting"];
 	int subpixel_positioning = p_options["subpixel_positioning"];
 	real_t oversampling = p_options["oversampling"];
 	Array fallbacks = p_options["fallbacks"];
 
 	// Load base font data.
-	Vector<uint8_t> data = FileAccess::get_file_as_array(p_source_file);
+	Vector<uint8_t> data = FileAccess::get_file_as_bytes(p_source_file);
 
 	// Create font.
 	Ref<FontFile> font;
 	font.instantiate();
 	font->set_data(data);
-	font->set_antialiased(antialiased);
+	font->set_antialiasing((TextServer::FontAntialiasing)antialiasing);
 	font->set_generate_mipmaps(generate_mipmaps);
 	font->set_multichannel_signed_distance_field(msdf);
 	font->set_msdf_pixel_range(px_range);
@@ -167,6 +172,7 @@ Error ResourceImporterDynamicFont::import(const String &p_source_file, const Str
 	font->set_opentype_feature_overrides(ot_ov);
 	font->set_fixed_size(0);
 	font->set_force_autohinter(autohinter);
+	font->set_allow_system_fallback(allow_system_fallback);
 	font->set_subpixel_positioning((TextServer::SubpixelPositioning)subpixel_positioning);
 	font->set_hinting((TextServer::Hinting)hinting);
 	font->set_oversampling(oversampling);

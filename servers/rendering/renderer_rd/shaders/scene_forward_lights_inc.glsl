@@ -97,11 +97,12 @@ void light_compute(vec3 N, vec3 L, vec3 V, float A, vec3 light_color, float atte
 		float diffuse_brdf_NL; // BRDF times N.L for calculating diffuse radiance
 
 #if defined(DIFFUSE_LAMBERT_WRAP)
-		// energy conserving lambert wrap shader
-		diffuse_brdf_NL = max(0.0, (NdotL + roughness) / ((1.0 + roughness) * (1.0 + roughness)));
+		// Energy conserving lambert wrap shader.
+		// https://web.archive.org/web/20210228210901/http://blog.stevemcauley.com/2011/12/03/energy-conserving-wrapped-diffuse/
+		diffuse_brdf_NL = max(0.0, (NdotL + roughness) / ((1.0 + roughness) * (1.0 + roughness))) * (1.0 / M_PI);
 #elif defined(DIFFUSE_TOON)
 
-		diffuse_brdf_NL = smoothstep(-roughness, max(roughness, 0.01), NdotL);
+		diffuse_brdf_NL = smoothstep(-roughness, max(roughness, 0.01), NdotL) * (1.0 / M_PI);
 
 #elif defined(DIFFUSE_BURLEY)
 
@@ -133,7 +134,8 @@ void light_compute(vec3 N, vec3 L, vec3 V, float A, vec3 light_color, float atte
 #endif
 
 #if defined(LIGHT_RIM_USED)
-		float rim_light = pow(max(0.0, 1.0 - cNdotV), max(0.0, (1.0 - roughness) * 16.0));
+		// Epsilon min to prevent pow(0, 0) singularity which results in undefined behavior.
+		float rim_light = pow(max(1e-4, 1.0 - cNdotV), max(0.0, (1.0 - roughness) * 16.0));
 		diffuse_light += rim_light * rim * mix(vec3(1.0), albedo, rim_tint) * light_color;
 #endif
 
@@ -201,7 +203,7 @@ void light_compute(vec3 N, vec3 L, vec3 V, float A, vec3 light_color, float atte
 		float cLdotH5 = SchlickFresnel(cLdotH);
 		// Calculate Fresnel using specular occlusion term from Filament:
 		// https://google.github.io/filament/Filament.html#lighting/occlusion/specularocclusion
-		float f90 = clamp(dot(f0, vec3(50.0 * 0.33)), 0.0, 1.0);
+		float f90 = clamp(dot(f0, vec3(50.0 * 0.33)), metallic, 1.0);
 		vec3 F = f0 + (f90 - f0) * cLdotH5;
 
 		vec3 specular_brdf_NL = cNdotL * D * F * G;
@@ -874,15 +876,13 @@ void light_process_spot(uint idx, vec3 vertex, vec3 eye_vec, vec3 normal, vec3 v
 			diffuse_light, specular_light);
 }
 
-void reflection_process(uint ref_index, vec3 view, vec3 vertex, vec3 normal, float roughness, vec3 ambient_light, vec3 specular_light, inout vec4 ambient_accum, inout vec4 reflection_accum) {
+void reflection_process(uint ref_index, vec3 vertex, vec3 ref_vec, vec3 normal, float roughness, vec3 ambient_light, vec3 specular_light, inout vec4 ambient_accum, inout vec4 reflection_accum) {
 	vec3 box_extents = reflections.data[ref_index].box_extents;
 	vec3 local_pos = (reflections.data[ref_index].local_matrix * vec4(vertex, 1.0)).xyz;
 
 	if (any(greaterThan(abs(local_pos), box_extents))) { //out of the reflection box
 		return;
 	}
-
-	vec3 ref_vec = normalize(reflect(-view, normal));
 
 	vec3 inner_pos = abs(local_pos / box_extents);
 	float blend = max(inner_pos.x, max(inner_pos.y, inner_pos.z));
@@ -911,7 +911,7 @@ void reflection_process(uint ref_index, vec3 view, vec3 vertex, vec3 normal, flo
 		vec4 reflection;
 
 		reflection.rgb = textureLod(samplerCubeArray(reflection_atlas, material_samplers[SAMPLER_LINEAR_WITH_MIPMAPS_CLAMP]), vec4(local_ref_vec, reflections.data[ref_index].index), roughness * MAX_ROUGHNESS_LOD).rgb * sc_luminance_multiplier;
-
+		reflection.rgb *= reflections.data[ref_index].exposure_normalization;
 		if (reflections.data[ref_index].exterior) {
 			reflection.rgb = mix(specular_light, reflection.rgb, blend);
 		}
@@ -934,6 +934,7 @@ void reflection_process(uint ref_index, vec3 view, vec3 vertex, vec3 normal, flo
 			vec4 ambient_out;
 
 			ambient_out.rgb = textureLod(samplerCubeArray(reflection_atlas, material_samplers[SAMPLER_LINEAR_WITH_MIPMAPS_CLAMP]), vec4(local_amb_vec, reflections.data[ref_index].index), MAX_ROUGHNESS_LOD).rgb;
+			ambient_out.rgb *= reflections.data[ref_index].exposure_normalization;
 			ambient_out.a = blend;
 			if (reflections.data[ref_index].exterior) {
 				ambient_out.rgb = mix(ambient_light, ambient_out.rgb, blend);

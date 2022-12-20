@@ -16,13 +16,14 @@
 # harvinder rathor <harvinderr09@gmail.com>, 2021.
 # Sumanyu Aggarwal <sumanyu.code@gmail.com>, 2021.
 # Arin <upadhyay.arin@gmail.com>, 2022.
+# Anime Fanz <accc1431@gmail.com>, 2022.
 msgid ""
 msgstr ""
 "Project-Id-Version: Godot Engine editor\n"
 "Report-Msgid-Bugs-To: https://github.com/godotengine/godot\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2022-06-08 06:48+0000\n"
-"Last-Translator: Arin <upadhyay.arin@gmail.com>\n"
+"PO-Revision-Date: 2022-12-05 04:25+0000\n"
+"Last-Translator: Anime Fanz <accc1431@gmail.com>\n"
 "Language-Team: Hindi <https://hosted.weblate.org/projects/godot-engine/godot/"
 "hi/>\n"
 "Language: hi\n"
@@ -30,7 +31,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.13-dev\n"
+"X-Generator: Weblate 4.15-dev\n"
 
 #: core/bind/core_bind.cpp main/main.cpp
 msgid "Tablet Driver"
@@ -242,72 +243,71 @@ msgid "Connection"
 msgstr "संबंध"
 
 #: core/io/http_client.cpp
+#, fuzzy
 msgid "Read Chunk Size"
-msgstr ""
+msgstr "चंक आकार पढ़ें"
 
 #: core/io/marshalls.cpp
 msgid "Object ID"
-msgstr ""
+msgstr "वस्तु आईडी"
 
 #: core/io/multiplayer_api.cpp core/io/packet_peer.cpp
+#, fuzzy
 msgid "Allow Object Decoding"
-msgstr ""
+msgstr "ऑब्जेक्ट डिकोडिंग की अनुमति दें"
 
 #: core/io/multiplayer_api.cpp scene/main/scene_tree.cpp
 msgid "Refuse New Network Connections"
-msgstr ""
+msgstr "नए नेटवर्क कनेक्शन को मना करें"
 
 #: core/io/multiplayer_api.cpp scene/main/scene_tree.cpp
 msgid "Network Peer"
-msgstr ""
+msgstr "नेटवर्क सहकर्मी"
 
 #: core/io/multiplayer_api.cpp scene/animation/animation_player.cpp
-#, fuzzy
 msgid "Root Node"
-msgstr "एक नया बनाएं"
+msgstr "रूट नोड"
 
 #: core/io/networked_multiplayer_peer.cpp
-#, fuzzy
 msgid "Refuse New Connections"
-msgstr "जोड़िये"
+msgstr "नए कनेक्शनों को मना करें"
 
 #: core/io/networked_multiplayer_peer.cpp
 #, fuzzy
 msgid "Transfer Mode"
-msgstr "सदस्यता बनाएं"
+msgstr "रीति का अंतरण करें"
 
 #: core/io/packet_peer.cpp
 msgid "Encode Buffer Max Size"
-msgstr ""
+msgstr "एनकोड बफर अधिकतम आकार"
 
 #: core/io/packet_peer.cpp
 msgid "Input Buffer Max Size"
-msgstr ""
+msgstr "इनपुट बफर अधिकतम आकार"
 
 #: core/io/packet_peer.cpp
 msgid "Output Buffer Max Size"
-msgstr ""
+msgstr "आउटपुट बफर अधिकतम आकार"
 
 #: core/io/packet_peer.cpp
 msgid "Stream Peer"
-msgstr ""
+msgstr "स्ट्रीम पीयर"
 
 #: core/io/stream_peer.cpp
 msgid "Big Endian"
-msgstr ""
+msgstr "बड़े एंडियन"
 
 #: core/io/stream_peer.cpp
 msgid "Data Array"
-msgstr ""
+msgstr "डेटा ऐरे"
 
 #: core/io/stream_peer_ssl.cpp
 msgid "Blocking Handshake"
-msgstr ""
+msgstr "हैंडशेक ब्लॉक करना"
 
 #: core/io/udp_server.cpp
-#, fuzzy
 msgid "Max Pending Connections"
-msgstr "कनेक्शन संपादित करें:"
+msgstr "अधिकतम लंबित कनेक्शन"
 
 #: core/math/expression.cpp modules/gdscript/gdscript_functions.cpp
 #: modules/visual_script/visual_script_builtin_funcs.cpp
@@ -325,9 +325,8 @@ msgid "Not enough bytes for decoding bytes, or invalid format."
 msgstr "अमान्य फ़ोर्मैट, या बाइट्स डिकोडिंग के लिए पर्याप्त बाइट्स नहीं।"
 
 #: core/math/expression.cpp
-#, fuzzy
 msgid "Invalid input %d (not passed) in expression"
-msgstr "एक्सप्रेशन मे अमान्य इनपुट %i (पास नहीं हो पाया)"
+msgstr "व्यंजक में अमान्य इनपुट %d (पास नहीं हुआ)"
 
 #: core/math/expression.cpp
 msgid "self can't be used because instance is null (not passed)"
@@ -355,144 +354,141 @@ msgstr "'%s ' को कॉल करने पर:"
 
 #: core/math/random_number_generator.cpp
 #: modules/opensimplex/open_simplex_noise.cpp
+#, fuzzy
 msgid "Seed"
-msgstr ""
+msgstr "बीज"
 
 #: core/math/random_number_generator.cpp
+#, fuzzy
 msgid "State"
-msgstr ""
+msgstr "राज्य"
 
 #: core/message_queue.cpp
+#, fuzzy
 msgid "Message Queue"
-msgstr ""
+msgstr "संदेश कतार"
 
 #: core/message_queue.cpp
 msgid "Max Size (KB)"
-msgstr ""
+msgstr "अधिकतम आकार (केबी)"
 
 #: core/os/input.cpp
-#, fuzzy
 msgid "Mouse Mode"
-msgstr "दृश्य रोकें"
+msgstr "माउस मोड"
 
 #: core/os/input.cpp
 msgid "Use Accumulated Input"
-msgstr ""
+msgstr "संचित इनपुट का प्रयोग करें"
 
 #: core/os/input_event.cpp editor/project_settings_editor.cpp
 #: servers/audio_server.cpp
 msgid "Device"
-msgstr ""
+msgstr "उपकरण"
 
 #: core/os/input_event.cpp
+#, fuzzy
 msgid "Alt"
-msgstr ""
+msgstr "ऑल्ट"
 
 #: core/os/input_event.cpp
 msgid "Shift"
-msgstr ""
+msgstr "शिफ्ट"
 
 #: core/os/input_event.cpp
-#, fuzzy
 msgid "Control"
-msgstr "वर्जन कंट्रोल"
+msgstr "कंट्रोल"
 
 #: core/os/input_event.cpp
 msgid "Meta"
-msgstr ""
+msgstr "मेटा"
 
 #: core/os/input_event.cpp
-#, fuzzy
 msgid "Command"
-msgstr "समुदाय"
+msgstr "कमांड"
 
 #: core/os/input_event.cpp
 #, fuzzy
 msgid "Physical"
-msgstr "फिजिक्स फ्रेम %"
+msgstr "शारीरिक"
 
 #: core/os/input_event.cpp scene/2d/touch_screen_button.cpp
 #: scene/gui/base_button.cpp scene/gui/texture_button.cpp
 #: scene/resources/default_theme/default_theme.cpp
-#, fuzzy
 msgid "Pressed"
 msgstr "प्रीसेट"
 
 #: core/os/input_event.cpp
-#, fuzzy
 msgid "Scancode"
-msgstr "स्रोतस्कैन कीजिये"
+msgstr "स्कैनकोड"
 
 #: core/os/input_event.cpp
 msgid "Physical Scancode"
-msgstr ""
+msgstr "भौतिक स्कैनकोड"
 
 #: core/os/input_event.cpp
 msgid "Unicode"
-msgstr ""
+msgstr "यूनिकोड"
 
 #: core/os/input_event.cpp
 msgid "Echo"
-msgstr ""
+msgstr "इको"
 
 #: core/os/input_event.cpp scene/gui/base_button.cpp
 msgid "Button Mask"
-msgstr ""
+msgstr "बटन मास्क"
 
 #: core/os/input_event.cpp scene/2d/node_2d.cpp scene/gui/control.cpp
-#, fuzzy
 msgid "Global Position"
-msgstr "कोन्स्टन्ट"
+msgstr "वैश्विक स्थिति"
 
 #: core/os/input_event.cpp
 msgid "Factor"
-msgstr ""
+msgstr "फैक्टर"
 
 #: core/os/input_event.cpp
 msgid "Button Index"
-msgstr ""
+msgstr "बटन अनुक्रमणिका"
 
 #: core/os/input_event.cpp
 msgid "Doubleclick"
-msgstr ""
+msgstr "डबलक्लिक"
 
 #: core/os/input_event.cpp
 msgid "Tilt"
-msgstr ""
+msgstr "टिल्ट"
 
 #: core/os/input_event.cpp
-#, fuzzy
 msgid "Pressure"
-msgstr "प्रीसेट"
+msgstr "प्रेशर"
 
 #: core/os/input_event.cpp
 msgid "Pen Inverted"
-msgstr ""
+msgstr "पेन उल्टा"
 
 #: core/os/input_event.cpp
+#, fuzzy
 msgid "Relative"
-msgstr ""
+msgstr "रिश्तेदार"
 
 #: core/os/input_event.cpp scene/2d/camera_2d.cpp scene/2d/cpu_particles_2d.cpp
 #: scene/3d/cpu_particles.cpp scene/3d/interpolated_camera.cpp
 #: scene/animation/animation_player.cpp scene/resources/environment.cpp
 #: scene/resources/particles_material.cpp
 msgid "Speed"
-msgstr ""
+msgstr "स्पीड"
 
 #: core/os/input_event.cpp editor/project_settings_editor.cpp
 #: scene/3d/sprite_3d.cpp
 msgid "Axis"
-msgstr ""
+msgstr "अक्ष"
 
 #: core/os/input_event.cpp
-#, fuzzy
 msgid "Axis Value"
-msgstr "(मूल्य)"
+msgstr "एक्सिस वैल्यू"
 
 #: core/os/input_event.cpp modules/visual_script/visual_script_func_nodes.cpp
 msgid "Index"
-msgstr ""
+msgstr "इंडेक्स"
 
 #: core/os/input_event.cpp editor/project_settings_editor.cpp
 #: modules/visual_script/visual_script_nodes.cpp
@@ -503,60 +499,55 @@ msgstr "कार्य"
 #: core/os/input_event.cpp scene/resources/environment.cpp
 #: scene/resources/material.cpp
 msgid "Strength"
-msgstr ""
+msgstr "शक्ति"
 
 #: core/os/input_event.cpp
 msgid "Delta"
-msgstr ""
+msgstr "डेल्टा"
 
 #: core/os/input_event.cpp
-#, fuzzy
 msgid "Channel"
-msgstr "बदली"
+msgstr "चैनल"
 
 #: core/os/input_event.cpp main/main.cpp
-#, fuzzy
 msgid "Message"
-msgstr "समुदाय"
+msgstr "मैसेज"
 
 #: core/os/input_event.cpp
 msgid "Pitch"
-msgstr ""
+msgstr "पिच"
 
 #: core/os/input_event.cpp scene/2d/cpu_particles_2d.cpp
 #: scene/2d/physics_body_2d.cpp scene/3d/cpu_particles.cpp
 #: scene/3d/physics_body.cpp scene/resources/particles_material.cpp
 msgid "Velocity"
-msgstr ""
+msgstr "वेग"
 
 #: core/os/input_event.cpp
 msgid "Instrument"
-msgstr ""
+msgstr "साधन"
 
 #: core/os/input_event.cpp
-#, fuzzy
 msgid "Controller Number"
-msgstr "लाइन क्र.:"
+msgstr "नियंत्रक संख्या"
 
 #: core/os/input_event.cpp
 msgid "Controller Value"
-msgstr ""
+msgstr "नियंत्रक मान"
 
 #: core/project_settings.cpp editor/editor_node.cpp main/main.cpp
 #: platform/iphone/export/export.cpp platform/osx/export/export.cpp
 #: platform/windows/export/export.cpp
-#, fuzzy
 msgid "Application"
-msgstr "कार्य"
+msgstr "अनुप्रयोग"
 
 #: core/project_settings.cpp main/main.cpp
 msgid "Config"
-msgstr ""
+msgstr "कॉन्फ़िग"
 
 #: core/project_settings.cpp
-#, fuzzy
 msgid "Project Settings Override"
-msgstr "प्रोजेक्ट सेटिंग ..."
+msgstr "प्रोजेक्ट सेटिंग्स ओवरराइड"
 
 #: core/project_settings.cpp core/resource.cpp
 #: editor/animation_track_editor.cpp editor/editor_autoload_settings.cpp
@@ -582,47 +573,44 @@ msgstr "विवरण"
 #: main/main.cpp platform/android/export/export_plugin.cpp
 #: platform/javascript/export/export.cpp
 msgid "Run"
-msgstr ""
+msgstr "रन"
 
 #: core/project_settings.cpp editor/editor_node.cpp
 #: editor/run_settings_dialog.cpp main/main.cpp
 msgid "Main Scene"
-msgstr ""
+msgstr "मुख्य दृश्य"
 
 #: core/project_settings.cpp
-#, fuzzy
 msgid "Disable stdout"
 msgstr "बंद कर दिया गया है"
 
 #: core/project_settings.cpp
-#, fuzzy
 msgid "Disable stderr"
 msgstr "बंद कर दिया गया है"
 
 #: core/project_settings.cpp
 msgid "Use Hidden Project Data Directory"
-msgstr ""
+msgstr "छिपी हुई प्रोजेक्ट डेटा निर्देशिका का उपयोग करें"
 
 #: core/project_settings.cpp
 msgid "Use Custom User Dir"
-msgstr ""
+msgstr "कस्टम उपयोगकर्ता डायरेक्टरी का उपयोग करें"
 
 #: core/project_settings.cpp
 msgid "Custom User Dir Name"
-msgstr ""
+msgstr "कस्टम उपयोगकर्ता का नाम"
 
 #: core/project_settings.cpp main/main.cpp
 #: platform/javascript/export/export.cpp platform/osx/export/export.cpp
 #: platform/uwp/os_uwp.cpp
-#, fuzzy
 msgid "Display"
-msgstr "सब दिखाइए"
+msgstr "डिस्प्ले"
 
 #: core/project_settings.cpp main/main.cpp modules/csg/csg_shape.cpp
 #: modules/opensimplex/noise_texture.cpp scene/2d/line_2d.cpp
 #: scene/3d/label_3d.cpp scene/gui/text_edit.cpp scene/resources/texture.cpp
 msgid "Width"
-msgstr ""
+msgstr "चौड़ाई"
 
 #: core/project_settings.cpp main/main.cpp modules/csg/csg_shape.cpp
 #: modules/gltf/gltf_node.cpp modules/opensimplex/noise_texture.cpp
@@ -631,19 +619,19 @@ msgstr ""
 #: scene/resources/font.cpp scene/resources/navigation_mesh.cpp
 #: scene/resources/primitive_meshes.cpp scene/resources/texture.cpp
 msgid "Height"
-msgstr ""
+msgstr "ऊंचाई"
 
 #: core/project_settings.cpp
 msgid "Always On Top"
-msgstr ""
+msgstr "हमेशा शीर्ष पर"
 
 #: core/project_settings.cpp
 msgid "Test Width"
-msgstr ""
+msgstr "परीक्षण चौड़ाई"
 
 #: core/project_settings.cpp
 msgid "Test Height"
-msgstr ""
+msgstr "परीक्षण ऊंचाई"
 
 #: core/project_settings.cpp editor/animation_track_editor.cpp
 #: editor/editor_audio_buses.cpp main/main.cpp servers/audio_server.cpp
@@ -651,9 +639,8 @@ msgid "Audio"
 msgstr "ऑडियो"
 
 #: core/project_settings.cpp
-#, fuzzy
 msgid "Default Bus Layout"
-msgstr "प्रायिक बस लेआउट लोड कीजिये."
+msgstr "डिफ़ॉल्ट बस लेआउट"
 
 #: core/project_settings.cpp editor/editor_export.cpp
 #: editor/editor_file_system.cpp editor/editor_node.cpp
@@ -664,93 +651,84 @@ msgstr "संपादक"
 
 #: core/project_settings.cpp
 msgid "Main Run Args"
-msgstr ""
+msgstr "मुख्य रन तर्क"
 
 #: core/project_settings.cpp
-#, fuzzy
 msgid "Scene Naming"
-msgstr "दृश्य पथ:"
+msgstr "दृश्य नामकरण"
 
 #: core/project_settings.cpp
 msgid "Search In File Extensions"
-msgstr ""
+msgstr "फ़ाइल एक्सटेंशन में खोजें"
 
 #: core/project_settings.cpp
 msgid "Script Templates Search Path"
-msgstr ""
+msgstr "स्क्रिप्ट टेम्पलेट खोज पथ"
 
 #: core/project_settings.cpp
-#, fuzzy
 msgid "Version Control Autoload On Startup"
-msgstr "वर्जन कंट्रोल"
+msgstr "स्टार्टअप पर संस्करण नियंत्रण ऑटोलोड"
 
 #: core/project_settings.cpp
-#, fuzzy
 msgid "Version Control Plugin Name"
-msgstr "वर्जन कंट्रोल"
+msgstr "संस्करण नियंत्रण प्लगइन का नाम"
 
 #: core/project_settings.cpp scene/2d/collision_object_2d.cpp
 #: scene/3d/collision_object.cpp scene/gui/control.cpp
 msgid "Input"
-msgstr ""
+msgstr "इनपुट"
 
 #: core/project_settings.cpp
 msgid "UI Accept"
-msgstr ""
+msgstr "उपयोगकर्ता हस्तक्षेप स्वीकार करें"
 
 #: core/project_settings.cpp
-#, fuzzy
 msgid "UI Select"
-msgstr "चुनें"
+msgstr "उपयोगकर्ता हस्तक्षेप का चयन करें"
 
 #: core/project_settings.cpp
-#, fuzzy
 msgid "UI Cancel"
-msgstr "रद्द करें"
+msgstr "उपयोगकर्ता हस्तक्षेप रद्द करें"
 
 #: core/project_settings.cpp
-#, fuzzy
 msgid "UI Focus Next"
-msgstr "फ़ोकस पाथ"
+msgstr "उपयोगकर्ता हस्तक्षेप फोकस अगला"
 
 #: core/project_settings.cpp
-#, fuzzy
 msgid "UI Focus Prev"
-msgstr "फ़ोकस पाथ"
+msgstr "उपयोगकर्ता हस्तक्षेप फ़ोकस पिछला"
 
 #: core/project_settings.cpp
 msgid "UI Left"
-msgstr ""
+msgstr "उपयोगकर्ता हस्तक्षेप छोड़ दिया गया"
 
 #: core/project_settings.cpp
 msgid "UI Right"
-msgstr ""
+msgstr "उपयोगकर्ता हस्तक्षेप अधिकार"
 
 #: core/project_settings.cpp
 msgid "UI Up"
-msgstr ""
+msgstr "उपयोगकर्ता हस्तक्षेप बढ़ा"
 
 #: core/project_settings.cpp
-#, fuzzy
 msgid "UI Down"
-msgstr "नीचे"
+msgstr "उपयोगकर्ता हस्तक्षेप कम"
 
 #: core/project_settings.cpp
-#, fuzzy
 msgid "UI Page Up"
-msgstr "पृष्ठ: "
+msgstr "उपयोगकर्ता हस्तक्षेप पृष्ठ अप"
 
 #: core/project_settings.cpp
 msgid "UI Page Down"
-msgstr ""
+msgstr "उपयोगकर्ता हस्तक्षेप पृष्ठ नीचे"
 
 #: core/project_settings.cpp
 msgid "UI Home"
-msgstr ""
+msgstr "उपयोगकर्ता हस्तक्षेप घर"
 
 #: core/project_settings.cpp
 msgid "UI End"
-msgstr ""
+msgstr "उपयोगकर्ता हस्तक्षेप समाप्त होता है"
 
 #: core/project_settings.cpp main/main.cpp modules/bullet/register_types.cpp
 #: modules/bullet/space_bullet.cpp scene/2d/physics_body_2d.cpp
@@ -760,9 +738,8 @@ msgstr ""
 #: servers/physics_2d/physics_2d_server_wrap_mt.h
 #: servers/physics_2d/space_2d_sw.cpp servers/physics_2d_server.cpp
 #: servers/physics_server.cpp
-#, fuzzy
 msgid "Physics"
-msgstr "फिजिक्स फ्रेम %"
+msgstr "फिजिक्स"
 
 #: core/project_settings.cpp editor/editor_settings.cpp
 #: editor/import/resource_importer_layered_texture.cpp
@@ -772,11 +749,11 @@ msgstr "फिजिक्स फ्रेम %"
 #: scene/3d/physics_body.cpp scene/resources/world.cpp
 #: servers/physics/space_sw.cpp servers/physics_server.cpp
 msgid "3D"
-msgstr ""
+msgstr "3 डी"
 
 #: core/project_settings.cpp
 msgid "Smooth Trimesh Collision"
-msgstr ""
+msgstr "त्रिमेश की टक्कर"
 
 #: core/project_settings.cpp drivers/gles2/rasterizer_canvas_base_gles2.cpp
 #: drivers/gles2/rasterizer_scene_gles2.cpp
@@ -788,7 +765,7 @@ msgstr ""
 #: scene/main/viewport.cpp servers/visual/visual_server_scene.cpp
 #: servers/visual_server.cpp
 msgid "Rendering"
-msgstr ""
+msgstr "रेंडरिंग"
 
 #: core/project_settings.cpp drivers/gles2/rasterizer_storage_gles2.cpp
 #: drivers/gles3/rasterizer_scene_gles3.cpp
@@ -798,18 +775,17 @@ msgstr ""
 #: scene/resources/multimesh.cpp servers/visual/visual_server_scene.cpp
 #: servers/visual_server.cpp
 msgid "Quality"
-msgstr ""
+msgstr "क्वालिटी"
 
 #: core/project_settings.cpp scene/gui/file_dialog.cpp
 #: scene/main/scene_tree.cpp scene/resources/navigation_mesh.cpp
 #: servers/visual_server.cpp
-#, fuzzy
 msgid "Filters"
-msgstr "फिल्टर:"
+msgstr "फ़िल्टर्स"
 
 #: core/project_settings.cpp scene/main/viewport.cpp
 msgid "Sharpen Intensity"
-msgstr ""
+msgstr "शॉर्प गहनता"
 
 #: core/project_settings.cpp editor/editor_export.cpp editor/editor_node.cpp
 #: editor/editor_settings.cpp editor/plugins/script_editor_plugin.cpp
@@ -825,86 +801,81 @@ msgstr "डीबग करें"
 
 #: core/project_settings.cpp main/main.cpp modules/gdscript/gdscript.cpp
 #: modules/visual_script/visual_script.cpp scene/resources/dynamic_font.cpp
-#, fuzzy
 msgid "Settings"
-msgstr "एडीटर सेटिन्गस..."
+msgstr "सेटिंग्स"
 
 #: core/project_settings.cpp editor/script_editor_debugger.cpp main/main.cpp
 #: modules/mono/mono_gd/gd_mono.cpp
 msgid "Profiler"
-msgstr ""
+msgstr "प्रोफाइलर"
 
 #: core/project_settings.cpp
-#, fuzzy
 msgid "Max Functions"
-msgstr "कार्यों:"
+msgstr "मैक्स फ़ंक्शन"
 
 #: core/project_settings.cpp scene/3d/vehicle_body.cpp
-#, fuzzy
 msgid "Compression"
-msgstr "सदस्यता बनाएं"
+msgstr "कंप्रेशन"
 
 #: core/project_settings.cpp
 msgid "Formats"
-msgstr ""
+msgstr "फार्मेट"
 
 #: core/project_settings.cpp
 msgid "Zstd"
-msgstr ""
+msgstr "Zstd"
 
 #: core/project_settings.cpp
 msgid "Long Distance Matching"
-msgstr ""
+msgstr "लंबी दूरी का मिलान"
 
 #: core/project_settings.cpp
 msgid "Compression Level"
-msgstr ""
+msgstr "संपीड़न स्तर"
 
 #: core/project_settings.cpp
 msgid "Window Log Size"
-msgstr ""
+msgstr "विंडो लॉग आकार"
 
 #: core/project_settings.cpp
 msgid "Zlib"
-msgstr ""
+msgstr "Zlib"
 
 #: core/project_settings.cpp
 msgid "Gzip"
-msgstr ""
+msgstr "Gzip"
 
 #: core/project_settings.cpp platform/android/export/export.cpp
 msgid "Android"
-msgstr ""
+msgstr "एंड्रॉयड"
 
 #: core/project_settings.cpp
 msgid "Modules"
-msgstr ""
+msgstr "मॉड्यूल"
 
 #: core/register_core_types.cpp
 msgid "TCP"
-msgstr ""
+msgstr "टीसीपी"
 
 #: core/register_core_types.cpp
-#, fuzzy
 msgid "Connect Timeout Seconds"
-msgstr "Node से कनेक्ट करें:"
+msgstr "कनेक्ट टाइमआउट सेकंड"
 
 #: core/register_core_types.cpp
 msgid "Packet Peer Stream"
-msgstr ""
+msgstr "पैकेट पीयर स्ट्रीम"
 
 #: core/register_core_types.cpp
 msgid "Max Buffer (Power of 2)"
-msgstr ""
+msgstr "मैक्स बफर (2 की शक्ति)"
 
 #: core/register_core_types.cpp editor/editor_settings.cpp main/main.cpp
 msgid "SSL"
-msgstr ""
+msgstr "एसएसएल"
 
 #: core/register_core_types.cpp main/main.cpp
-#, fuzzy
 msgid "Certificates"
-msgstr "विशेषता"
+msgstr "प्रमाणपत्र"
 
 #: core/resource.cpp editor/dependency_editor.cpp
 #: editor/editor_resource_picker.cpp
@@ -913,9 +884,8 @@ msgid "Resource"
 msgstr "संसाधन"
 
 #: core/resource.cpp
-#, fuzzy
 msgid "Local To Scene"
-msgstr "क्लोज सीन"
+msgstr "स्थानीय से दृश्य"
 
 #: core/resource.cpp editor/dependency_editor.cpp
 #: editor/editor_autoload_settings.cpp editor/plugins/path_editor_plugin.cpp
@@ -925,21 +895,20 @@ msgid "Path"
 msgstr "पथ"
 
 #: core/script_language.cpp
-#, fuzzy
 msgid "Source Code"
-msgstr "संसाधन"
+msgstr "स्रोत कोड"
 
 #: core/translation.cpp editor/project_settings_editor.cpp
 msgid "Locale"
-msgstr ""
+msgstr "लोकेल"
 
 #: core/translation.cpp
 msgid "Test"
-msgstr ""
+msgstr "टेस्ट"
 
 #: core/translation.cpp scene/resources/font.cpp
 msgid "Fallback"
-msgstr ""
+msgstr "फ़ॉलबैक"
 
 #: core/ustring.cpp scene/resources/segment_shape_2d.cpp
 msgid "B"
@@ -975,17 +944,17 @@ msgstr "EiB"
 #: drivers/gles3/rasterizer_scene_gles3.cpp
 #: drivers/gles3/rasterizer_storage_gles3.cpp modules/gltf/gltf_state.cpp
 msgid "Buffers"
-msgstr ""
+msgstr "बफ़र्स"
 
 #: drivers/gles2/rasterizer_canvas_base_gles2.cpp
 #: drivers/gles3/rasterizer_canvas_base_gles3.cpp
 msgid "Canvas Polygon Buffer Size (KB)"
-msgstr ""
+msgstr "कैनवास बहुभुज बफर आकार (KB)"
 
 #: drivers/gles2/rasterizer_canvas_base_gles2.cpp
 #: drivers/gles3/rasterizer_canvas_base_gles3.cpp
 msgid "Canvas Polygon Index Buffer Size (KB)"
-msgstr ""
+msgstr "कैनवास बहुभुज सूचकांक बफर आकार (KB)"
 
 #: drivers/gles2/rasterizer_canvas_base_gles2.cpp
 #: drivers/gles3/rasterizer_canvas_base_gles3.cpp editor/editor_settings.cpp
@@ -997,28 +966,27 @@ msgstr ""
 #: servers/physics_2d/space_2d_sw.cpp servers/physics_2d_server.cpp
 #: servers/visual_server.cpp
 msgid "2D"
-msgstr ""
+msgstr "2डी"
 
 #: drivers/gles2/rasterizer_canvas_base_gles2.cpp
 #: drivers/gles3/rasterizer_canvas_base_gles3.cpp
-#, fuzzy
 msgid "Snapping"
-msgstr "आकस्मिक:"
+msgstr "स्नैपिंग"
 
 #: drivers/gles2/rasterizer_canvas_base_gles2.cpp
 #: drivers/gles3/rasterizer_canvas_base_gles3.cpp
 msgid "Use GPU Pixel Snap"
-msgstr ""
+msgstr "GPU Pixel Snap का उपयोग करें"
 
 #: drivers/gles2/rasterizer_scene_gles2.cpp
 #: drivers/gles3/rasterizer_scene_gles3.cpp
 msgid "Immediate Buffer Size (KB)"
-msgstr ""
+msgstr "तत्काल बफर आकार (KB)"
 
 #: drivers/gles2/rasterizer_storage_gles2.cpp
 #: drivers/gles3/rasterizer_storage_gles3.cpp
 msgid "Lightmapping"
-msgstr ""
+msgstr "लाइटमैपिंग"
 
 #: drivers/gles2/rasterizer_storage_gles2.cpp
 #: drivers/gles3/rasterizer_storage_gles3.cpp
@@ -4549,6 +4517,7 @@ msgstr "विविध परियोजना या दृश्य-व्�
 
 #: editor/editor_node.cpp editor/project_manager.cpp
 #: editor/script_create_dialog.cpp modules/mono/editor/csharp_project.cpp
+#: modules/mono/godotsharp_dirs.cpp
 msgid "Project"
 msgstr "परियोजना"
 
@@ -7430,7 +7399,8 @@ msgid "8 Bit"
 msgstr ""
 
 #: editor/import/resource_importer_wav.cpp main/main.cpp
-#: modules/mono/editor/csharp_project.cpp modules/mono/mono_gd/gd_mono.cpp
+#: modules/mono/editor/csharp_project.cpp modules/mono/godotsharp_dirs.cpp
+#: modules/mono/mono_gd/gd_mono.cpp
 msgid "Mono"
 msgstr ""
 
@@ -12999,9 +12969,10 @@ msgstr "आकस्मिक:"
 #: scene/2d/path_2d.cpp scene/2d/polygon_2d.cpp scene/2d/sprite.cpp
 #: scene/3d/cpu_particles.cpp scene/3d/label_3d.cpp scene/3d/path.cpp
 #: scene/3d/physics_body.cpp scene/3d/soft_body.cpp scene/3d/sprite_3d.cpp
-#: scene/gui/graph_node.cpp scene/gui/rich_text_effect.cpp
-#: scene/main/canvas_layer.cpp scene/resources/material.cpp
-#: scene/resources/particles_material.cpp scene/resources/style_box.cpp
+#: scene/3d/visual_instance.cpp scene/gui/graph_node.cpp
+#: scene/gui/rich_text_effect.cpp scene/main/canvas_layer.cpp
+#: scene/resources/material.cpp scene/resources/particles_material.cpp
+#: scene/resources/style_box.cpp
 msgid "Offset"
 msgstr ""
 
@@ -14397,12 +14368,11 @@ msgstr ""
 
 #: editor/project_manager.cpp
 msgid ""
-"Couldn't load project.godot in project path (error %d). It may be missing or "
-"corrupted."
+"Couldn't load project at '%s' (error %d). It may be missing or corrupted."
 msgstr ""
 
 #: editor/project_manager.cpp
-msgid "Couldn't edit project.godot in project path."
+msgid "Couldn't save project at '%s' (error %d)."
 msgstr ""
 
 #: editor/project_manager.cpp
@@ -15380,18 +15350,18 @@ msgstr ""
 msgid "Make Local"
 msgstr ""
 
-#: editor/scene_tree_dock.cpp editor/scene_tree_editor.cpp
-msgid "Another node already uses this unique name in the scene."
+#: editor/scene_tree_dock.cpp
+#, fuzzy
+msgid "Enable Scene Unique Name(s)"
+msgstr "नोड का नाम:"
+
+#: editor/scene_tree_dock.cpp
+msgid "Unique names already used by another node in the scene:"
 msgstr ""
 
 #: editor/scene_tree_dock.cpp
 #, fuzzy
-msgid "Enable Scene Unique Name"
-msgstr "नोड का नाम:"
-
-#: editor/scene_tree_dock.cpp editor/scene_tree_editor.cpp
-#, fuzzy
-msgid "Disable Scene Unique Name"
+msgid "Disable Scene Unique Name(s)"
 msgstr "नोड का नाम:"
 
 #: editor/scene_tree_dock.cpp
@@ -15588,6 +15558,11 @@ msgstr ""
 
 #: editor/scene_tree_editor.cpp
 #, fuzzy
+msgid "Disable Scene Unique Name"
+msgstr "नोड का नाम:"
+
+#: editor/scene_tree_editor.cpp
+#, fuzzy
 msgid "(Connecting From)"
 msgstr "कनेक्ट करने के लिए संकेत:"
 
@@ -15649,6 +15624,10 @@ msgstr ""
 
 #: editor/scene_tree_editor.cpp
 msgid "Invalid node name, the following characters are not allowed:"
+msgstr ""
+
+#: editor/scene_tree_editor.cpp
+msgid "Another node already uses this unique name in the scene."
 msgstr ""
 
 #: editor/scene_tree_editor.cpp
@@ -17527,6 +17506,21 @@ msgstr "सभी खंड"
 msgid "Auto Update Project"
 msgstr "परियोजना"
 
+#: modules/mono/godotsharp_dirs.cpp
+#, fuzzy
+msgid "Assembly Name"
+msgstr "सब दिखाइए"
+
+#: modules/mono/godotsharp_dirs.cpp
+#, fuzzy
+msgid "Solution Directory"
+msgstr "डायरेक्टरी चुनें"
+
+#: modules/mono/godotsharp_dirs.cpp
+#, fuzzy
+msgid "C# Project Directory"
+msgstr "डायरेक्टरी चुनें"
+
 #: modules/mono/mono_gd/gd_mono_utils.cpp
 msgid "End of inner exception stack trace"
 msgstr ""
@@ -19330,6 +19324,11 @@ msgstr "प्रतिलिपि"
 msgid "Custom BG Color"
 msgstr "प्रतिलिपि"
 
+#: platform/iphone/export/export.cpp
+#, fuzzy
+msgid "Export Icons"
+msgstr "सभी बढाय"
+
 #: platform/iphone/export/export.cpp platform/javascript/export/export.cpp
 #: platform/osx/export/export.cpp
 #, fuzzy
@@ -20168,6 +20167,12 @@ msgstr ""
 
 #: platform/uwp/export/export.cpp
 msgid "Show Name On Square 310 X 310"
+msgstr ""
+
+#: platform/uwp/export/export.cpp
+msgid ""
+"Godot's Mono version does not support the UWP platform. Use the standard "
+"build (no C# support) if you wish to target UWP."
 msgstr ""
 
 #: platform/uwp/export/export.cpp
@@ -23449,6 +23454,15 @@ msgstr "प्रतिमा"
 
 #: scene/3d/visibility_notifier.cpp
 msgid "AABB"
+msgstr ""
+
+#: scene/3d/visual_instance.cpp
+#, fuzzy
+msgid "Sorting"
+msgstr "आयात:"
+
+#: scene/3d/visual_instance.cpp
+msgid "Use AABB Center"
 msgstr ""
 
 #: scene/3d/visual_instance.cpp scene/resources/navigation_mesh.cpp

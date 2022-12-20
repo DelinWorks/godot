@@ -2,7 +2,7 @@
 # Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.
 # Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).
 # This file is distributed under the same license as the Godot source code.
-# Julen Irazoki <rktzbkr.julen@gmail.com>, 2019.
+# Julen Irazoki <rktzbkr.julen@gmail.com>, 2019, 2022.
 # Osoitz <oelkoro@gmail.com>, 2019, 2020.
 # Erik Zubiria <erik@ezsd.net>, 2021.
 # Sergio Varela <sergitroll9@gmail.com>, 2021.
@@ -11,15 +11,15 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Godot Engine editor\n"
 "Report-Msgid-Bugs-To: https://github.com/godotengine/godot\n"
-"PO-Revision-Date: 2022-05-23 21:52+0000\n"
-"Last-Translator: Gorka Egino <gorkainventor@gmail.com>\n"
+"PO-Revision-Date: 2022-11-06 03:12+0000\n"
+"Last-Translator: Julen Irazoki <rktzbkr.julen@gmail.com>\n"
 "Language-Team: Basque <https://hosted.weblate.org/projects/godot-engine/"
 "godot/eu/>\n"
 "Language: eu\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8-bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.13-dev\n"
+"X-Generator: Weblate 4.14.2\n"
 
 #: core/bind/core_bind.cpp main/main.cpp
 msgid "Tablet Driver"
@@ -2064,7 +2064,7 @@ msgstr ""
 
 #: editor/connections_dialog.cpp editor/editor_help.cpp editor/node_dock.cpp
 msgid "Signals"
-msgstr ""
+msgstr "Seinaleak"
 
 #: editor/connections_dialog.cpp
 msgid "Filter signals"
@@ -3676,7 +3676,7 @@ msgstr ""
 #: editor/editor_network_profiler.cpp editor/editor_node.cpp
 #: scene/main/node.cpp scene/resources/default_theme/default_theme.cpp
 msgid "Node"
-msgstr ""
+msgstr "Nodoa"
 
 #: editor/editor_network_profiler.cpp
 msgid "Incoming RPC"
@@ -4426,6 +4426,7 @@ msgstr ""
 
 #: editor/editor_node.cpp editor/project_manager.cpp
 #: editor/script_create_dialog.cpp modules/mono/editor/csharp_project.cpp
+#: modules/mono/godotsharp_dirs.cpp
 msgid "Project"
 msgstr "Proiektua"
 
@@ -7197,7 +7198,8 @@ msgid "8 Bit"
 msgstr ""
 
 #: editor/import/resource_importer_wav.cpp main/main.cpp
-#: modules/mono/editor/csharp_project.cpp modules/mono/mono_gd/gd_mono.cpp
+#: modules/mono/editor/csharp_project.cpp modules/mono/godotsharp_dirs.cpp
+#: modules/mono/mono_gd/gd_mono.cpp
 msgid "Mono"
 msgstr ""
 
@@ -12660,9 +12662,10 @@ msgstr "Atxikitze aukerak"
 #: scene/2d/path_2d.cpp scene/2d/polygon_2d.cpp scene/2d/sprite.cpp
 #: scene/3d/cpu_particles.cpp scene/3d/label_3d.cpp scene/3d/path.cpp
 #: scene/3d/physics_body.cpp scene/3d/soft_body.cpp scene/3d/sprite_3d.cpp
-#: scene/gui/graph_node.cpp scene/gui/rich_text_effect.cpp
-#: scene/main/canvas_layer.cpp scene/resources/material.cpp
-#: scene/resources/particles_material.cpp scene/resources/style_box.cpp
+#: scene/3d/visual_instance.cpp scene/gui/graph_node.cpp
+#: scene/gui/rich_text_effect.cpp scene/main/canvas_layer.cpp
+#: scene/resources/material.cpp scene/resources/particles_material.cpp
+#: scene/resources/style_box.cpp
 msgid "Offset"
 msgstr ""
 
@@ -14020,12 +14023,11 @@ msgstr ""
 
 #: editor/project_manager.cpp
 msgid ""
-"Couldn't load project.godot in project path (error %d). It may be missing or "
-"corrupted."
+"Couldn't load project at '%s' (error %d). It may be missing or corrupted."
 msgstr ""
 
 #: editor/project_manager.cpp
-msgid "Couldn't edit project.godot in project path."
+msgid "Couldn't save project at '%s' (error %d)."
 msgstr ""
 
 #: editor/project_manager.cpp
@@ -14999,18 +15001,18 @@ msgstr ""
 msgid "Make Local"
 msgstr ""
 
-#: editor/scene_tree_dock.cpp editor/scene_tree_editor.cpp
-msgid "Another node already uses this unique name in the scene."
+#: editor/scene_tree_dock.cpp
+#, fuzzy
+msgid "Enable Scene Unique Name(s)"
+msgstr "Animazio berriaren izena:"
+
+#: editor/scene_tree_dock.cpp
+msgid "Unique names already used by another node in the scene:"
 msgstr ""
 
 #: editor/scene_tree_dock.cpp
 #, fuzzy
-msgid "Enable Scene Unique Name"
-msgstr "Animazio berriaren izena:"
-
-#: editor/scene_tree_dock.cpp editor/scene_tree_editor.cpp
-#, fuzzy
-msgid "Disable Scene Unique Name"
+msgid "Disable Scene Unique Name(s)"
 msgstr "Animazio berriaren izena:"
 
 #: editor/scene_tree_dock.cpp
@@ -15200,6 +15202,11 @@ msgid "Button Group"
 msgstr ""
 
 #: editor/scene_tree_editor.cpp
+#, fuzzy
+msgid "Disable Scene Unique Name"
+msgstr "Animazio berriaren izena:"
+
+#: editor/scene_tree_editor.cpp
 msgid "(Connecting From)"
 msgstr ""
 
@@ -15260,6 +15267,10 @@ msgstr ""
 
 #: editor/scene_tree_editor.cpp
 msgid "Invalid node name, the following characters are not allowed:"
+msgstr ""
+
+#: editor/scene_tree_editor.cpp
+msgid "Another node already uses this unique name in the scene."
 msgstr ""
 
 #: editor/scene_tree_editor.cpp
@@ -17102,6 +17113,21 @@ msgstr ""
 msgid "Auto Update Project"
 msgstr "Proiektua"
 
+#: modules/mono/godotsharp_dirs.cpp
+#, fuzzy
+msgid "Assembly Name"
+msgstr "Erakutsi guztiak"
+
+#: modules/mono/godotsharp_dirs.cpp
+#, fuzzy
+msgid "Solution Directory"
+msgstr "Ireki direktorioa"
+
+#: modules/mono/godotsharp_dirs.cpp
+#, fuzzy
+msgid "C# Project Directory"
+msgstr "Ireki direktorioa"
+
 #: modules/mono/mono_gd/gd_mono_utils.cpp
 msgid "End of inner exception stack trace"
 msgstr ""
@@ -18861,6 +18887,11 @@ msgstr "Funtzioak:"
 msgid "Custom BG Color"
 msgstr "Funtzioak:"
 
+#: platform/iphone/export/export.cpp
+#, fuzzy
+msgid "Export Icons"
+msgstr "Esportatu"
+
 #: platform/iphone/export/export.cpp platform/javascript/export/export.cpp
 #: platform/osx/export/export.cpp
 #, fuzzy
@@ -19681,6 +19712,12 @@ msgstr ""
 
 #: platform/uwp/export/export.cpp
 msgid "Show Name On Square 310 X 310"
+msgstr ""
+
+#: platform/uwp/export/export.cpp
+msgid ""
+"Godot's Mono version does not support the UWP platform. Use the standard "
+"build (no C# support) if you wish to target UWP."
 msgstr ""
 
 #: platform/uwp/export/export.cpp
@@ -22901,6 +22938,15 @@ msgstr "Ispilua"
 
 #: scene/3d/visibility_notifier.cpp
 msgid "AABB"
+msgstr ""
+
+#: scene/3d/visual_instance.cpp
+#, fuzzy
+msgid "Sorting"
+msgstr "Atxikitze ezarpenak"
+
+#: scene/3d/visual_instance.cpp
+msgid "Use AABB Center"
 msgstr ""
 
 #: scene/3d/visual_instance.cpp scene/resources/navigation_mesh.cpp

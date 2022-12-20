@@ -39,7 +39,7 @@ void OpenXRSelectActionDialog::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE:
 		case NOTIFICATION_THEME_CHANGED: {
-			scroll->add_theme_style_override("bg", get_theme_stylebox(SNAME("bg"), SNAME("Tree")));
+			scroll->add_theme_style_override("panel", get_theme_stylebox(SNAME("panel"), SNAME("Tree")));
 		} break;
 	}
 }
@@ -47,7 +47,7 @@ void OpenXRSelectActionDialog::_notification(int p_what) {
 void OpenXRSelectActionDialog::_on_select_action(const String p_action) {
 	if (selected_action != "") {
 		NodePath button_path = action_buttons[selected_action];
-		Button *button = static_cast<Button *>(get_node(button_path));
+		Button *button = Object::cast_to<Button>(get_node(button_path));
 		if (button != nullptr) {
 			button->set_flat(true);
 		}
@@ -57,7 +57,7 @@ void OpenXRSelectActionDialog::_on_select_action(const String p_action) {
 
 	if (selected_action != "") {
 		NodePath button_path = action_buttons[selected_action];
-		Button *button = static_cast<Button *>(get_node(button_path));
+		Button *button = Object::cast_to<Button>(get_node(button_path));
 		if (button != nullptr) {
 			button->set_flat(false);
 		}

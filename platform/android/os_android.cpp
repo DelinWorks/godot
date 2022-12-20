@@ -44,6 +44,7 @@
 #include "net_socket_android.h"
 
 #include <dlfcn.h>
+#include <sys/system_properties.h>
 
 #include "java_godot_io_wrapper.h"
 #include "java_godot_wrapper.h"
@@ -161,11 +162,16 @@ Vector<String> OS_Android::get_granted_permissions() const {
 }
 
 Error OS_Android::open_dynamic_library(const String p_path, void *&p_library_handle, bool p_also_set_library_path, String *r_resolved_path) {
-	p_library_handle = dlopen(p_path.utf8().get_data(), RTLD_NOW);
+	String path = p_path;
+	if (!FileAccess::exists(path)) {
+		path = p_path.get_file();
+	}
+
+	p_library_handle = dlopen(path.utf8().get_data(), RTLD_NOW);
 	ERR_FAIL_NULL_V_MSG(p_library_handle, ERR_CANT_OPEN, "Can't open dynamic library: " + p_path + ", error: " + dlerror() + ".");
 
 	if (r_resolved_path != nullptr) {
-		*r_resolved_path = p_path;
+		*r_resolved_path = path;
 	}
 
 	return OK;
@@ -173,6 +179,79 @@ Error OS_Android::open_dynamic_library(const String p_path, void *&p_library_han
 
 String OS_Android::get_name() const {
 	return "Android";
+}
+
+String OS_Android::get_system_property(const char *key) const {
+	static String value;
+	char value_str[PROP_VALUE_MAX];
+	if (__system_property_get(key, value_str)) {
+		value = String(value_str);
+	}
+	return value;
+}
+
+String OS_Android::get_distribution_name() const {
+	if (!get_system_property("ro.havoc.version").is_empty()) {
+		return "Havoc OS";
+	} else if (!get_system_property("org.pex.version").is_empty()) { // Putting before "Pixel Experience", because it's derivating from it.
+		return "Pixel Extended";
+	} else if (!get_system_property("org.pixelexperience.version").is_empty()) {
+		return "Pixel Experience";
+	} else if (!get_system_property("ro.potato.version").is_empty()) {
+		return "POSP";
+	} else if (!get_system_property("ro.xtended.version").is_empty()) {
+		return "Project-Xtended";
+	} else if (!get_system_property("org.evolution.version").is_empty()) {
+		return "Evolution X";
+	} else if (!get_system_property("ro.corvus.version").is_empty()) {
+		return "Corvus-Q";
+	} else if (!get_system_property("ro.pa.version").is_empty()) {
+		return "Paranoid Android";
+	} else if (!get_system_property("ro.crdroid.version").is_empty()) {
+		return "crDroid Android";
+	} else if (!get_system_property("ro.syberia.version").is_empty()) {
+		return "Syberia Project";
+	} else if (!get_system_property("ro.arrow.version").is_empty()) {
+		return "ArrowOS";
+	} else if (!get_system_property("ro.lineage.version").is_empty()) { // Putting LineageOS last, just in case any derivative writes to "ro.lineage.version".
+		return "LineageOS";
+	}
+
+	if (!get_system_property("ro.modversion").is_empty()) { // Handles other Android custom ROMs.
+		return vformat("%s %s", get_name(), "Custom ROM");
+	}
+
+	// Handles stock Android.
+	return get_name();
+}
+
+String OS_Android::get_version() const {
+	const Vector<const char *> roms = { "ro.havoc.version", "org.pex.version", "org.pixelexperience.version",
+		"ro.potato.version", "ro.xtended.version", "org.evolution.version", "ro.corvus.version", "ro.pa.version",
+		"ro.crdroid.version", "ro.syberia.version", "ro.arrow.version", "ro.lineage.version" };
+	for (int i = 0; i < roms.size(); i++) {
+		static String rom_version = get_system_property(roms[i]);
+		if (!rom_version.is_empty()) {
+			return rom_version;
+		}
+	}
+
+	static String mod_version = get_system_property("ro.modversion"); // Handles other Android custom ROMs.
+	if (!mod_version.is_empty()) {
+		return mod_version;
+	}
+
+	// Handles stock Android.
+	static String sdk_version = get_system_property("ro.build.version.sdk_int");
+	static String build = get_system_property("ro.build.version.incremental");
+	if (!sdk_version.is_empty()) {
+		if (!build.is_empty()) {
+			return vformat("%s.%s", sdk_version, build);
+		}
+		return sdk_version;
+	}
+
+	return "";
 }
 
 MainLoop *OS_Android::get_main_loop() const {
@@ -189,12 +268,16 @@ bool OS_Android::main_loop_iterate(bool *r_should_swap_buffers) {
 	if (!main_loop) {
 		return false;
 	}
+	DisplayServerAndroid::get_singleton()->reset_swap_buffers_flag();
 	DisplayServerAndroid::get_singleton()->process_events();
 	uint64_t current_frames_drawn = Engine::get_singleton()->get_frames_drawn();
 	bool exit = Main::iteration();
 
 	if (r_should_swap_buffers) {
-		*r_should_swap_buffers = !is_in_low_processor_usage_mode() || RenderingServer::get_singleton()->has_changed() || current_frames_drawn != Engine::get_singleton()->get_frames_drawn();
+		*r_should_swap_buffers = !is_in_low_processor_usage_mode() ||
+				DisplayServerAndroid::get_singleton()->should_swap_buffers() ||
+				RenderingServer::get_singleton()->has_changed() ||
+				current_frames_drawn != Engine::get_singleton()->get_frames_drawn();
 	}
 
 	return exit;
@@ -252,6 +335,229 @@ String OS_Android::get_model_name() const {
 
 String OS_Android::get_data_path() const {
 	return get_user_data_dir();
+}
+
+void OS_Android::_load_system_font_config() {
+	font_aliases.clear();
+	fonts.clear();
+	font_names.clear();
+
+	Ref<XMLParser> parser;
+	parser.instantiate();
+
+	Error err = parser->open(String(getenv("ANDROID_ROOT")).path_join("/etc/fonts.xml"));
+	if (err == OK) {
+		bool in_font_node = false;
+		String fb, fn;
+		FontInfo fi;
+
+		while (parser->read() == OK) {
+			if (parser->get_node_type() == XMLParser::NODE_ELEMENT) {
+				in_font_node = false;
+				if (parser->get_node_name() == "familyset") {
+					int ver = parser->has_attribute("version") ? parser->get_attribute_value("version").to_int() : 0;
+					if (ver < 21) {
+						ERR_PRINT(vformat("Unsupported font config version %s", ver));
+						break;
+					}
+				} else if (parser->get_node_name() == "alias") {
+					String name = parser->has_attribute("name") ? parser->get_attribute_value("name").strip_edges() : String();
+					String to = parser->has_attribute("to") ? parser->get_attribute_value("to").strip_edges() : String();
+					if (!name.is_empty() && !to.is_empty()) {
+						font_aliases[name] = to;
+					}
+				} else if (parser->get_node_name() == "family") {
+					fn = parser->has_attribute("name") ? parser->get_attribute_value("name").strip_edges() : String();
+					String lang_code = parser->has_attribute("lang") ? parser->get_attribute_value("lang").strip_edges() : String();
+					Vector<String> lang_codes = lang_code.split(",");
+					for (int i = 0; i < lang_codes.size(); i++) {
+						Vector<String> lang_code_elements = lang_codes[i].split("-");
+						if (lang_code_elements.size() >= 1 && lang_code_elements[0] != "und") {
+							// Add missing script codes.
+							if (lang_code_elements[0] == "ko") {
+								fi.script.insert("Hani");
+								fi.script.insert("Hang");
+							}
+							if (lang_code_elements[0] == "ja") {
+								fi.script.insert("Hani");
+								fi.script.insert("Kana");
+								fi.script.insert("Hira");
+							}
+							if (!lang_code_elements[0].is_empty()) {
+								fi.lang.insert(lang_code_elements[0]);
+							}
+						}
+						if (lang_code_elements.size() >= 2) {
+							// Add common codes for variants and remove variants not supported by HarfBuzz/ICU.
+							if (lang_code_elements[1] == "Aran") {
+								fi.script.insert("Arab");
+							}
+							if (lang_code_elements[1] == "Cyrs") {
+								fi.script.insert("Cyrl");
+							}
+							if (lang_code_elements[1] == "Hanb") {
+								fi.script.insert("Hani");
+								fi.script.insert("Bopo");
+							}
+							if (lang_code_elements[1] == "Hans" || lang_code_elements[1] == "Hant") {
+								fi.script.insert("Hani");
+							}
+							if (lang_code_elements[1] == "Syrj" || lang_code_elements[1] == "Syre" || lang_code_elements[1] == "Syrn") {
+								fi.script.insert("Syrc");
+							}
+							if (!lang_code_elements[1].is_empty() && lang_code_elements[1] != "Zsym" && lang_code_elements[1] != "Zsye" && lang_code_elements[1] != "Zmth") {
+								fi.script.insert(lang_code_elements[1]);
+							}
+						}
+					}
+				} else if (parser->get_node_name() == "font") {
+					in_font_node = true;
+					fb = parser->has_attribute("fallbackFor") ? parser->get_attribute_value("fallbackFor").strip_edges() : String();
+					fi.weight = parser->has_attribute("weight") ? parser->get_attribute_value("weight").to_int() : 400;
+					fi.italic = parser->has_attribute("style") && parser->get_attribute_value("style").strip_edges() == "italic";
+				}
+			}
+			if (parser->get_node_type() == XMLParser::NODE_TEXT) {
+				if (in_font_node) {
+					fi.filename = parser->get_node_data().strip_edges();
+					fi.font_name = fn;
+					if (!fb.is_empty() && fn.is_empty()) {
+						fi.font_name = fb;
+						fi.priority = 2;
+					}
+					if (fi.font_name.is_empty()) {
+						fi.font_name = "sans-serif";
+						fi.priority = 5;
+					}
+					if (fi.font_name.ends_with("-condensed")) {
+						fi.stretch = 75;
+						fi.font_name = fi.font_name.trim_suffix("-condensed");
+					}
+					fonts.push_back(fi);
+					font_names.insert(fi.font_name);
+				}
+			}
+			if (parser->get_node_type() == XMLParser::NODE_ELEMENT_END) {
+				in_font_node = false;
+				if (parser->get_node_name() == "font") {
+					fb = String();
+					fi.font_name = String();
+					fi.priority = 0;
+					fi.weight = 400;
+					fi.stretch = 100;
+					fi.italic = false;
+				} else if (parser->get_node_name() == "family") {
+					fi = FontInfo();
+					fn = String();
+				}
+			}
+		}
+		parser->close();
+	} else {
+		ERR_PRINT("Unable to load font config");
+	}
+
+	font_config_loaded = true;
+}
+
+Vector<String> OS_Android::get_system_fonts() const {
+	if (!font_config_loaded) {
+		const_cast<OS_Android *>(this)->_load_system_font_config();
+	}
+	Vector<String> ret;
+	for (const String &E : font_names) {
+		ret.push_back(E);
+	}
+	return ret;
+}
+
+Vector<String> OS_Android::get_system_font_path_for_text(const String &p_font_name, const String &p_text, const String &p_locale, const String &p_script, int p_weight, int p_stretch, bool p_italic) const {
+	if (!font_config_loaded) {
+		const_cast<OS_Android *>(this)->_load_system_font_config();
+	}
+	String font_name = p_font_name.to_lower();
+	if (font_aliases.has(font_name)) {
+		font_name = font_aliases[font_name];
+	}
+	String root = String(getenv("ANDROID_ROOT")).path_join("fonts");
+	String lang_prefix = p_locale.split("_")[0];
+	Vector<String> ret;
+	int best_score = 0;
+	for (const List<FontInfo>::Element *E = fonts.front(); E; E = E->next()) {
+		int score = 0;
+		if (!E->get().script.is_empty() && !p_script.is_empty() && !E->get().script.has(p_script)) {
+			continue;
+		}
+		float sim = E->get().font_name.similarity(font_name);
+		if (sim > 0.0) {
+			score += (60 * sim + 5 - E->get().priority);
+		}
+		if (E->get().lang.has(p_locale)) {
+			score += 120;
+		} else if (E->get().lang.has(lang_prefix)) {
+			score += 115;
+		}
+		if (E->get().script.has(p_script)) {
+			score += 240;
+		}
+		score += (20 - Math::abs(E->get().weight - p_weight) / 50);
+		score += (20 - Math::abs(E->get().stretch - p_stretch) / 10);
+		if (E->get().italic == p_italic) {
+			score += 30;
+		}
+		if (score > best_score) {
+			best_score = score;
+			if (ret.find(root.path_join(E->get().filename)) < 0) {
+				ret.insert(0, root.path_join(E->get().filename));
+			}
+		} else if (score == best_score || E->get().script.is_empty()) {
+			if (ret.find(root.path_join(E->get().filename)) < 0) {
+				ret.push_back(root.path_join(E->get().filename));
+			}
+		}
+		if (score >= 490) {
+			break; // Perfect match.
+		}
+	}
+
+	return ret;
+}
+
+String OS_Android::get_system_font_path(const String &p_font_name, int p_weight, int p_stretch, bool p_italic) const {
+	if (!font_config_loaded) {
+		const_cast<OS_Android *>(this)->_load_system_font_config();
+	}
+	String font_name = p_font_name.to_lower();
+	if (font_aliases.has(font_name)) {
+		font_name = font_aliases[font_name];
+	}
+	String root = String(getenv("ANDROID_ROOT")).path_join("fonts");
+
+	int best_score = 0;
+	const List<FontInfo>::Element *best_match = nullptr;
+
+	for (const List<FontInfo>::Element *E = fonts.front(); E; E = E->next()) {
+		int score = 0;
+		if (E->get().font_name == font_name) {
+			score += (65 - E->get().priority);
+		}
+		score += (20 - Math::abs(E->get().weight - p_weight) / 50);
+		score += (20 - Math::abs(E->get().stretch - p_stretch) / 10);
+		if (E->get().italic == p_italic) {
+			score += 30;
+		}
+		if (score >= 60 && score > best_score) {
+			best_score = score;
+			best_match = E;
+		}
+		if (score >= 140) {
+			break; // Perfect match.
+		}
+	}
+	if (best_match) {
+		return root.path_join(best_match->get().filename);
+	}
+	return String();
 }
 
 String OS_Android::get_executable_path() const {
@@ -362,23 +668,26 @@ void OS_Android::vibrate_handheld(int p_duration_ms) {
 }
 
 String OS_Android::get_config_path() const {
-	return get_user_data_dir().plus_file("config");
+	return get_user_data_dir().path_join("config");
 }
 
 bool OS_Android::_check_internal_feature_support(const String &p_feature) {
+	if (p_feature == "system_fonts") {
+		return true;
+	}
 	if (p_feature == "mobile") {
 		return true;
 	}
 #if defined(__aarch64__)
-	if (p_feature == "arm64-v8a") {
+	if (p_feature == "arm64-v8a" || p_feature == "arm64") {
 		return true;
 	}
 #elif defined(__ARM_ARCH_7A__)
-	if (p_feature == "armeabi-v7a" || p_feature == "armeabi") {
+	if (p_feature == "armeabi-v7a" || p_feature == "armeabi" || p_feature == "arm32") {
 		return true;
 	}
 #elif defined(__arm__)
-	if (p_feature == "armeabi") {
+	if (p_feature == "armeabi" || p_feature == "arm") {
 		return true;
 	}
 #endif
@@ -395,7 +704,6 @@ OS_Android::OS_Android(GodotJavaWrapper *p_godot_java, GodotIOJavaWrapper *p_god
 
 #if defined(GLES3_ENABLED)
 	gl_extensions = nullptr;
-	use_gl2 = false;
 #endif
 
 #if defined(VULKAN_ENABLED)

@@ -51,6 +51,7 @@ protected:
 	static void _bind_methods();
 
 	GDVIRTUAL0RC(Vector<String>, _get_recognized_extensions)
+	GDVIRTUAL2RC(bool, _recognize_path, String, StringName)
 	GDVIRTUAL1RC(bool, _handles_type, StringName)
 	GDVIRTUAL1RC(String, _get_resource_type, String)
 	GDVIRTUAL1RC(ResourceUID::ID, _get_resource_uid, String)
@@ -217,6 +218,8 @@ public:
 	static void reload_translation_remaps();
 	static void load_translation_remaps();
 	static void clear_translation_remaps();
+
+	static void clear_thread_load_tasks();
 
 	static void set_load_callback(ResourceLoadedCallback p_callback);
 	static ResourceLoaderImport import;

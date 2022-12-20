@@ -33,26 +33,31 @@
 
 #include "editor/editor_plugin.h"
 #include "editor/editor_scale.h"
-#include "editor/editor_spin_slider.h"
 #include "editor/plugins/node_3d_editor_gizmos.h"
-#include "scene/3d/camera_3d.h"
-#include "scene/3d/light_3d.h"
-#include "scene/3d/visual_instance_3d.h"
-#include "scene/3d/world_environment.h"
-#include "scene/gui/color_picker.h"
-#include "scene/gui/panel_container.h"
+#include "scene/gui/box_container.h"
+#include "scene/gui/button.h"
 #include "scene/gui/spin_box.h"
-#include "scene/gui/split_container.h"
-#include "scene/resources/environment.h"
-#include "scene/resources/fog_material.h"
-#include "scene/resources/sky_material.h"
 
+class AcceptDialog;
+class CheckBox;
+class ColorPickerButton;
+class ConfirmationDialog;
+class DirectionalLight3D;
 class EditorData;
+class EditorSpinSlider;
+class HSplitContainer;
+class LineEdit;
+class MenuButton;
 class Node3DEditor;
 class Node3DEditorViewport;
+class OptionButton;
+class PanelContainer;
+class ProceduralSkyMaterial;
+class SubViewport;
 class SubViewportContainer;
-class DirectionalLight3D;
+class VSplitContainer;
 class WorldEnvironment;
+class ViewportNavigationControl;
 
 class ViewportRotationControl : public Control {
 	GDCLASS(ViewportRotationControl, Control);
@@ -73,7 +78,7 @@ class ViewportRotationControl : public Control {
 	Vector<Color> axis_colors;
 	Vector<int> axis_menu_options;
 	Vector2i orbiting_mouse_start;
-	bool orbiting = false;
+	int orbiting_index = -1;
 	int focused_axis = -2;
 
 	const float AXIS_CIRCLE_RADIUS = 8.0f * EDSCALE;
@@ -86,6 +91,8 @@ protected:
 	void _get_sorted_axis(Vector<Axis2D> &r_axis);
 	void _update_focus();
 	void _on_mouse_exited();
+	void _process_click(int p_index, Vector2 p_position, bool p_pressed);
+	void _process_drag(Ref<InputEventWithModifiers> p_event, int p_index, Vector2 p_position, Vector2 p_relative_position);
 
 public:
 	void set_viewport(Node3DEditorViewport *p_viewport);
@@ -94,6 +101,7 @@ public:
 class Node3DEditorViewport : public Control {
 	GDCLASS(Node3DEditorViewport, Control);
 	friend class Node3DEditor;
+	friend class ViewportNavigationControl;
 	friend class ViewportRotationControl;
 	enum {
 		VIEW_TOP,
@@ -192,6 +200,9 @@ private:
 	void _menu_option(int p_option);
 	void _set_auto_orthogonal();
 	Node3D *preview_node = nullptr;
+	bool update_preview_node = false;
+	Point2 preview_node_viewport_pos;
+	Vector3 preview_node_pos;
 	AABB *preview_bounds = nullptr;
 	Vector<String> selected_files;
 	AcceptDialog *accept = nullptr;
@@ -199,9 +210,7 @@ private:
 	Node *target_node = nullptr;
 	Point2 drop_pos;
 
-	EditorData *editor_data = nullptr;
 	EditorSelection *editor_selection = nullptr;
-	UndoRedo *undo_redo = nullptr;
 
 	CheckBox *preview_camera = nullptr;
 	SubViewportContainer *subviewport_container = nullptr;
@@ -231,6 +240,9 @@ private:
 	Label *preview_material_label_desc = nullptr;
 
 	VBoxContainer *top_right_vbox = nullptr;
+	VBoxContainer *bottom_center_vbox = nullptr;
+	ViewportNavigationControl *position_control = nullptr;
+	ViewportNavigationControl *look_control = nullptr;
 	ViewportRotationControl *rotation_control = nullptr;
 	Gradient *frame_time_gradient = nullptr;
 	Label *cpu_time_label = nullptr;
@@ -292,7 +304,8 @@ private:
 		NAVIGATION_PAN,
 		NAVIGATION_ZOOM,
 		NAVIGATION_ORBIT,
-		NAVIGATION_LOOK
+		NAVIGATION_LOOK,
+		NAVIGATION_MOVE
 	};
 	enum TransformMode {
 		TRANSFORM_NONE,
@@ -371,6 +384,7 @@ private:
 
 	void _view_settings_confirmed(real_t p_interp_delta);
 	void _update_camera(real_t p_interp_delta);
+	void _update_navigation_controls_visibility();
 	Transform3D to_camera_transform(const Cursor &p_cursor) const;
 	void _draw();
 
@@ -386,6 +400,7 @@ private:
 	Camera3D *previewing = nullptr;
 	Camera3D *preview = nullptr;
 
+	bool previewing_camera;
 	bool previewing_cinema;
 	bool _is_node_locked(const Node *p_node);
 	void _preview_exited_scene();
@@ -412,7 +427,7 @@ private:
 	bool _create_instance(Node *parent, String &path, const Point2 &p_point);
 	void _perform_drop_data();
 
-	bool can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) const;
+	bool can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from);
 	void drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from);
 
 	void _project_settings_changed();
@@ -432,7 +447,7 @@ protected:
 	static void _bind_methods();
 
 public:
-	void update_surface() { surface->update(); }
+	void update_surface() { surface->queue_redraw(); }
 	void update_transform_gizmo_view();
 
 	void set_can_preview(Camera3D *p_preview);
@@ -568,7 +583,7 @@ private:
 	bool grid_enabled = false;
 	bool grid_init_draw = false;
 	Camera3D::ProjectionType grid_camera_last_update_perspective = Camera3D::PROJECTION_PERSPECTIVE;
-	Vector3 grid_camera_last_update_position = Vector3();
+	Vector3 grid_camera_last_update_position;
 
 	Ref<ArrayMesh> move_gizmo[3], move_plane_gizmo[3], rotate_gizmo[4], scale_gizmo[3], scale_plane_gizmo[3], axis_gizmo[3];
 	Ref<StandardMaterial3D> gizmo_color[3];
@@ -682,7 +697,6 @@ private:
 	HBoxContainer *context_menu_hbox = nullptr;
 
 	void _generate_selection_boxes();
-	UndoRedo *undo_redo = nullptr;
 
 	int camera_override_viewport_id;
 
@@ -704,6 +718,7 @@ private:
 	Node3D *selected = nullptr;
 
 	void _request_gizmo(Object *p_obj);
+	void _request_gizmo_for_id(ObjectID p_id);
 	void _set_subgizmo_selection(Object *p_obj, Ref<Node3DGizmo> p_gizmo, int p_id, Transform3D p_transform = Transform3D());
 	void _clear_subgizmo_selection(Object *p_obj = nullptr);
 
@@ -718,6 +733,9 @@ private:
 
 	void _selection_changed();
 	void _refresh_menu_icons();
+
+	bool do_snap_selected_nodes_to_floor = false;
+	void _snap_selected_nodes_to_floor();
 
 	// Preview Sun and Environment
 
@@ -762,8 +780,11 @@ private:
 	Button *sun_environ_settings = nullptr;
 
 	DirectionalLight3D *preview_sun = nullptr;
+	bool preview_sun_dangling = false;
 	WorldEnvironment *preview_environment = nullptr;
+	bool preview_env_dangling = false;
 	Ref<Environment> environment;
+	Ref<CameraAttributesPractical> camera_attributes;
 	Ref<ProceduralSkyMaterial> sky_material;
 
 	bool sun_environ_updating = false;
@@ -820,13 +841,10 @@ public:
 	void select_gizmo_highlight_axis(int p_axis);
 	void set_custom_camera(Node *p_camera) { custom_camera = p_camera; }
 
-	void set_undo_redo(UndoRedo *p_undo_redo) { undo_redo = p_undo_redo; }
 	Dictionary get_state() const;
 	void set_state(const Dictionary &p_state);
 
 	Ref<Environment> get_viewport_environment() { return viewport_environment; }
-
-	UndoRedo *get_undo_redo() { return undo_redo; }
 
 	void add_control_to_menu_panel(Control *p_control);
 	void remove_control_from_menu_panel(Control *p_control);
@@ -907,6 +925,33 @@ public:
 
 	Node3DEditorPlugin();
 	~Node3DEditorPlugin();
+};
+
+class ViewportNavigationControl : public Control {
+	GDCLASS(ViewportNavigationControl, Control);
+
+	Node3DEditorViewport *viewport = nullptr;
+	Vector2i focused_mouse_start;
+	Vector2 focused_pos;
+	bool hovered = false;
+	int focused_index = -1;
+	Node3DEditorViewport::NavigationMode nav_mode = Node3DEditorViewport::NavigationMode::NAVIGATION_NONE;
+
+	const float AXIS_CIRCLE_RADIUS = 30.0f * EDSCALE;
+
+protected:
+	void _notification(int p_what);
+	virtual void gui_input(const Ref<InputEvent> &p_event) override;
+	void _draw();
+	void _on_mouse_entered();
+	void _on_mouse_exited();
+	void _process_click(int p_index, Vector2 p_position, bool p_pressed);
+	void _process_drag(int p_index, Vector2 p_position, Vector2 p_relative_position);
+	void _update_navigation();
+
+public:
+	void set_navigation_mode(Node3DEditorViewport::NavigationMode p_nav_mode);
+	void set_viewport(Node3DEditorViewport *p_viewport);
 };
 
 #endif // NODE_3D_EDITOR_PLUGIN_H

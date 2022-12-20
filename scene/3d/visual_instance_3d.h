@@ -40,8 +40,6 @@ class VisualInstance3D : public Node3D {
 	RID instance;
 	uint32_t layers = 1;
 
-	RID _get_visual_instance_rid() const;
-
 protected:
 	void _update_visibility();
 
@@ -59,8 +57,6 @@ public:
 
 	RID get_instance() const;
 	virtual AABB get_aabb() const;
-
-	virtual AABB get_transformed_aabb() const; // helper
 
 	void set_base(const RID &p_base);
 	RID get_base() const;
@@ -121,10 +117,11 @@ private:
 
 	float lod_bias = 1.0;
 
-	mutable HashMap<StringName, Variant> instance_uniforms;
-	mutable HashMap<StringName, StringName> instance_uniform_property_remap;
+	mutable HashMap<StringName, Variant> instance_shader_parameters;
+	mutable HashMap<StringName, StringName> instance_shader_parameter_property_remap;
 
 	float extra_cull_margin = 0.0;
+	AABB custom_aabb;
 	LightmapScale lightmap_scale = LIGHTMAP_SCALE_1X;
 	GIMode gi_mode = GI_MODE_STATIC;
 	bool ignore_occlusion_culling = false;
@@ -142,7 +139,7 @@ public:
 	void set_cast_shadows_setting(ShadowCastingSetting p_shadow_casting_setting);
 	ShadowCastingSetting get_cast_shadows_setting() const;
 
-	void set_transparecy(float p_transparency);
+	void set_transparency(float p_transparency);
 	float get_transparency() const;
 
 	void set_visibility_range_begin(float p_dist);
@@ -178,15 +175,16 @@ public:
 	void set_lightmap_scale(LightmapScale p_scale);
 	LightmapScale get_lightmap_scale() const;
 
-	void set_instance_shader_uniform(const StringName &p_uniform, const Variant &p_value);
-	Variant get_instance_shader_uniform(const StringName &p_uniform) const;
+	void set_instance_shader_parameter(const StringName &p_name, const Variant &p_value);
+	Variant get_instance_shader_parameter(const StringName &p_name) const;
 
-	void set_custom_aabb(AABB aabb);
+	void set_custom_aabb(AABB p_aabb);
+	AABB get_custom_aabb() const;
 
 	void set_ignore_occlusion_culling(bool p_enabled);
 	bool is_ignoring_occlusion_culling();
 
-	TypedArray<String> get_configuration_warnings() const override;
+	PackedStringArray get_configuration_warnings() const override;
 	GeometryInstance3D();
 	virtual ~GeometryInstance3D();
 };

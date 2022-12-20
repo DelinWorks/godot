@@ -54,8 +54,7 @@ private:
 		float velocity[3];
 		uint32_t active;
 		float color[4];
-		float custom[3];
-		float lifetime;
+		float custom[4];
 	};
 
 	struct ParticlesFrameParams {
@@ -97,7 +96,7 @@ private:
 			uint32_t type;
 
 			uint32_t texture_index; //texture index for vector field
-			real_t scale;
+			float scale;
 			uint32_t pad[2];
 		};
 
@@ -106,8 +105,8 @@ private:
 		float prev_system_phase;
 		uint32_t cycle;
 
-		real_t explosiveness;
-		real_t randomness;
+		float explosiveness;
+		float randomness;
 		float time;
 		float delta;
 
@@ -125,9 +124,6 @@ private:
 
 		Attractor attractors[MAX_ATTRACTORS];
 		Collider colliders[MAX_COLLIDERS];
-	};
-
-	struct ParticleEmissionBufferData {
 	};
 
 	struct ParticleEmissionBuffer {
@@ -232,7 +228,7 @@ private:
 
 		Dependency dependency;
 
-		double trail_length = 1.0;
+		double trail_lifetime = 0.3;
 		bool trails_enabled = false;
 		LocalVector<ParticlesFrameParams> frame_history;
 		LocalVector<ParticlesFrameParams> trail_params;
@@ -317,15 +313,12 @@ private:
 		RID version;
 		bool uses_collision = false;
 
-		HashMap<StringName, ShaderLanguage::ShaderNode::Uniform> uniforms;
 		Vector<ShaderCompiler::GeneratedCode::Texture> texture_uniforms;
 
 		Vector<uint32_t> ubo_offsets;
 		uint32_t ubo_size = 0;
 
-		String path;
 		String code;
-		HashMap<StringName, HashMap<int, RID>> default_texture_params;
 
 		RID pipeline;
 
@@ -335,14 +328,8 @@ private:
 		uint32_t userdata_count = 0;
 
 		virtual void set_code(const String &p_Code);
-		virtual void set_path_hint(const String &p_hint);
-		virtual void set_default_texture_param(const StringName &p_name, RID p_texture, int p_index);
-		virtual void get_shader_uniform_list(List<PropertyInfo> *p_param_list) const;
-		virtual void get_instance_param_list(List<RendererMaterialStorage::InstanceShaderParam> *p_param_list) const;
-		virtual bool is_param_texture(const StringName &p_param) const;
 		virtual bool is_animated() const;
 		virtual bool casts_shadows() const;
-		virtual Variant get_default_parameter(const StringName &p_parameter) const;
 		virtual RS::ShaderNativeSourceCode get_native_source_code() const;
 
 		ParticlesShaderData() {}
@@ -354,14 +341,14 @@ private:
 		return ParticlesStorage::get_singleton()->_create_particles_shader_func();
 	}
 
-	struct ParticlesMaterialData : public MaterialStorage::MaterialData {
+	struct ParticleProcessMaterialData : public MaterialStorage::MaterialData {
 		ParticlesShaderData *shader_data = nullptr;
 		RID uniform_set;
 
 		virtual void set_render_priority(int p_priority) {}
 		virtual void set_next_pass(RID p_pass) {}
 		virtual bool update_parameters(const HashMap<StringName, Variant> &p_parameters, bool p_uniform_dirty, bool p_textures_dirty);
-		virtual ~ParticlesMaterialData();
+		virtual ~ParticleProcessMaterialData();
 	};
 
 	MaterialStorage::MaterialData *_create_particles_material_func(ParticlesShaderData *p_shader);
@@ -405,12 +392,14 @@ public:
 	ParticlesStorage();
 	virtual ~ParticlesStorage();
 
+	bool free(RID p_rid);
+
 	/* PARTICLES */
 
 	bool owns_particles(RID p_rid) { return particles_owner.owns(p_rid); }
 
 	virtual RID particles_allocate() override;
-	virtual void particles_initialize(RID p_particles_collision) override;
+	virtual void particles_initialize(RID p_rid) override;
 	virtual void particles_free(RID p_rid) override;
 
 	virtual void particles_set_mode(RID p_particles, RS::ParticlesMode p_mode) override;
@@ -517,7 +506,7 @@ public:
 
 	virtual void particles_add_collision(RID p_particles, RID p_particles_collision_instance) override;
 	virtual void particles_remove_collision(RID p_particles, RID p_particles_collision_instance) override;
-	virtual void particles_set_canvas_sdf_collision(RID p_particles, bool p_enable, const Transform2D &p_xform, const Rect2 &p_to_screen, RID p_texture) override;
+	void particles_set_canvas_sdf_collision(RID p_particles, bool p_enable, const Transform2D &p_xform, const Rect2 &p_to_screen, RID p_texture);
 
 	virtual void update_particles() override;
 
@@ -544,7 +533,7 @@ public:
 	virtual AABB particles_collision_get_aabb(RID p_particles_collision) const override;
 	Vector3 particles_collision_get_extents(RID p_particles_collision) const;
 	virtual bool particles_collision_is_heightfield(RID p_particles_collision) const override;
-	virtual RID particles_collision_get_heightfield_framebuffer(RID p_particles_collision) const override;
+	RID particles_collision_get_heightfield_framebuffer(RID p_particles_collision) const;
 
 	Dependency *particles_collision_get_dependency(RID p_particles) const;
 

@@ -34,7 +34,6 @@
 #include "modules/modules_enabled.gen.h" // For regex.
 #ifdef MODULE_REGEX_ENABLED
 
-#include "core/object/undo_redo.h"
 #include "editor/scene_tree_editor.h"
 #include "scene/gui/check_box.h"
 #include "scene/gui/check_button.h"
@@ -63,7 +62,6 @@ class RenameDialog : public ConfirmationDialog {
 	static void _error_handler(void *p_self, const char *p_func, const char *p_file, int p_line, const char *p_error, const char *p_errorexp, bool p_editor_notify, ErrorHandlerType p_type);
 
 	SceneTreeEditor *scene_tree_editor = nullptr;
-	UndoRedo *undo_redo = nullptr;
 	int global_count = 0;
 
 	LineEdit *lne_search = nullptr;
@@ -109,8 +107,7 @@ public:
 	void reset();
 	void rename();
 
-	RenameDialog(SceneTreeEditor *p_scene_tree_editor, UndoRedo *p_undo_redo = nullptr);
-	~RenameDialog() {}
+	RenameDialog(SceneTreeEditor *p_scene_tree_editor);
 };
 
 #endif // MODULE_REGEX_ENABLED

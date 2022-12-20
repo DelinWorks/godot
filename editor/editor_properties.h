@@ -31,15 +31,19 @@
 #ifndef EDITOR_PROPERTIES_H
 #define EDITOR_PROPERTIES_H
 
-#include "editor/create_dialog.h"
 #include "editor/editor_inspector.h"
-#include "editor/editor_locale_dialog.h"
-#include "editor/editor_resource_picker.h"
-#include "editor/editor_spin_slider.h"
-#include "editor/property_selector.h"
-#include "editor/scene_tree_editor.h"
-#include "scene/gui/color_picker.h"
-#include "scene/gui/line_edit.h"
+
+class CheckBox;
+class ColorPickerButton;
+class CreateDialog;
+class EditorFileDialog;
+class EditorLocaleDialog;
+class EditorResourcePicker;
+class EditorSpinSlider;
+class PropertySelector;
+class SceneTreeDialog;
+class TextEdit;
+class TextureButton;
 
 class EditorPropertyNil : public EditorProperty {
 	GDCLASS(EditorPropertyNil, EditorProperty);
@@ -67,6 +71,7 @@ public:
 	void set_string_name(bool p_enabled);
 	virtual void update_property() override;
 	void set_placeholder(const String &p_string);
+	void set_secret(bool p_enabled);
 	EditorPropertyText();
 };
 
@@ -342,19 +347,21 @@ private:
 	String basename;
 	LayerType layer_type;
 	PopupMenu *layers = nullptr;
-	Button *button = nullptr;
+	TextureButton *button = nullptr;
 
 	void _button_pressed();
 	void _menu_pressed(int p_menu);
 	void _refresh_names();
 
 protected:
+	void _notification(int p_what);
 	virtual void _set_read_only(bool p_read_only) override;
 	static void _bind_methods();
 
 public:
 	void setup(LayerType p_layer_type);
 	void set_layer_name(int p_index, const String &p_name);
+	String get_layer_name(int p_index) const;
 	virtual void update_property() override;
 	EditorPropertyLayers();
 };
@@ -431,7 +438,7 @@ protected:
 
 public:
 	virtual void update_property() override;
-	void setup(double p_min, double p_max, double p_step, bool p_no_slider, bool p_exp_range, bool p_greater, bool p_lesser, const String &p_suffix = String(), bool p_angle_in_radians = false);
+	void setup(double p_min, double p_max, double p_step, bool p_hide_slider, bool p_exp_range, bool p_greater, bool p_lesser, const String &p_suffix = String(), bool p_angle_in_radians = false);
 	EditorPropertyFloat();
 };
 
@@ -494,7 +501,7 @@ protected:
 
 public:
 	virtual void update_property() override;
-	void setup(double p_min, double p_max, double p_step, bool p_no_slider, bool p_link = false, const String &p_suffix = String());
+	void setup(double p_min, double p_max, double p_step, bool p_hide_slider, bool p_link = false, const String &p_suffix = String());
 	EditorPropertyVector2(bool p_force_wide = false);
 };
 
@@ -511,7 +518,7 @@ protected:
 
 public:
 	virtual void update_property() override;
-	void setup(double p_min, double p_max, double p_step, bool p_no_slider, const String &p_suffix = String());
+	void setup(double p_min, double p_max, double p_step, bool p_hide_slider, const String &p_suffix = String());
 	EditorPropertyRect2(bool p_force_wide = false);
 };
 
@@ -539,7 +546,7 @@ public:
 	virtual void update_property() override;
 	virtual void update_using_vector(Vector3 p_vector);
 	virtual Vector3 get_vector();
-	void setup(double p_min, double p_max, double p_step, bool p_no_slider, bool p_link = false, const String &p_suffix = String(), bool p_angle_in_radians = false);
+	void setup(double p_min, double p_max, double p_step, bool p_hide_slider, bool p_link = false, const String &p_suffix = String(), bool p_angle_in_radians = false);
 	EditorPropertyVector3(bool p_force_wide = false);
 };
 
@@ -559,7 +566,7 @@ protected:
 
 public:
 	virtual void update_property() override;
-	void setup(int p_min, int p_max, bool p_no_slider, bool p_link = false, const String &p_suffix = String());
+	void setup(int p_min, int p_max, bool p_hide_slider, bool p_link = false, const String &p_suffix = String());
 	EditorPropertyVector2i(bool p_force_wide = false);
 };
 
@@ -576,7 +583,7 @@ protected:
 
 public:
 	virtual void update_property() override;
-	void setup(int p_min, int p_max, bool p_no_slider, const String &p_suffix = String());
+	void setup(int p_min, int p_max, bool p_hide_slider, const String &p_suffix = String());
 	EditorPropertyRect2i(bool p_force_wide = false);
 };
 
@@ -601,7 +608,7 @@ protected:
 
 public:
 	virtual void update_property() override;
-	void setup(int p_min, int p_max, bool p_no_slider, bool p_link = false, const String &p_suffix = String());
+	void setup(int p_min, int p_max, bool p_hide_slider, bool p_link = false, const String &p_suffix = String());
 	EditorPropertyVector3i(bool p_force_wide = false);
 };
 
@@ -618,15 +625,32 @@ protected:
 
 public:
 	virtual void update_property() override;
-	void setup(double p_min, double p_max, double p_step, bool p_no_slider, const String &p_suffix = String());
+	void setup(double p_min, double p_max, double p_step, bool p_hide_slider, const String &p_suffix = String());
 	EditorPropertyPlane(bool p_force_wide = false);
 };
 
 class EditorPropertyQuaternion : public EditorProperty {
 	GDCLASS(EditorPropertyQuaternion, EditorProperty);
+	BoxContainer *default_layout = nullptr;
 	EditorSpinSlider *spin[4];
 	bool setting = false;
+
+	Button *warning = nullptr;
+	AcceptDialog *warning_dialog = nullptr;
+
+	Label *euler_label = nullptr;
+	VBoxContainer *edit_custom_bc = nullptr;
+	EditorSpinSlider *euler[3];
+	Button *edit_button = nullptr;
+
+	Vector3 edit_euler;
+
 	void _value_changed(double p_val, const String &p_name);
+	void _edit_custom_value();
+	void _custom_value_changed(double p_val);
+	void _warning_pressed();
+
+	bool is_grabbing_euler();
 
 protected:
 	virtual void _set_read_only(bool p_read_only) override;
@@ -635,7 +659,7 @@ protected:
 
 public:
 	virtual void update_property() override;
-	void setup(double p_min, double p_max, double p_step, bool p_no_slider, const String &p_suffix = String());
+	void setup(double p_min, double p_max, double p_step, bool p_hide_slider, const String &p_suffix = String(), bool p_hide_editor = false);
 	EditorPropertyQuaternion();
 };
 
@@ -652,7 +676,7 @@ protected:
 
 public:
 	virtual void update_property() override;
-	void setup(double p_min, double p_max, double p_step, bool p_no_slider, const String &p_suffix = String());
+	void setup(double p_min, double p_max, double p_step, bool p_hide_slider, const String &p_suffix = String());
 	EditorPropertyVector4();
 };
 
@@ -669,7 +693,7 @@ protected:
 
 public:
 	virtual void update_property() override;
-	void setup(double p_min, double p_max, bool p_no_slider, const String &p_suffix = String());
+	void setup(double p_min, double p_max, bool p_hide_slider, const String &p_suffix = String());
 	EditorPropertyVector4i();
 };
 
@@ -686,7 +710,7 @@ protected:
 
 public:
 	virtual void update_property() override;
-	void setup(double p_min, double p_max, double p_step, bool p_no_slider, const String &p_suffix = String());
+	void setup(double p_min, double p_max, double p_step, bool p_hide_slider, const String &p_suffix = String());
 	EditorPropertyAABB();
 };
 
@@ -703,7 +727,7 @@ protected:
 
 public:
 	virtual void update_property() override;
-	void setup(double p_min, double p_max, double p_step, bool p_no_slider, const String &p_suffix = String());
+	void setup(double p_min, double p_max, double p_step, bool p_hide_slider, const String &p_suffix = String());
 	EditorPropertyTransform2D(bool p_include_origin = true);
 };
 
@@ -720,7 +744,7 @@ protected:
 
 public:
 	virtual void update_property() override;
-	void setup(double p_min, double p_max, double p_step, bool p_no_slider, const String &p_suffix = String());
+	void setup(double p_min, double p_max, double p_step, bool p_hide_slider, const String &p_suffix = String());
 	EditorPropertyBasis();
 };
 
@@ -738,7 +762,7 @@ protected:
 public:
 	virtual void update_property() override;
 	virtual void update_using_transform(Transform3D p_transform);
-	void setup(double p_min, double p_max, double p_step, bool p_no_slider, const String &p_suffix = String());
+	void setup(double p_min, double p_max, double p_step, bool p_hide_slider, const String &p_suffix = String());
 	EditorPropertyTransform3D();
 };
 
@@ -756,7 +780,7 @@ protected:
 public:
 	virtual void update_property() override;
 	virtual void update_using_transform(Projection p_transform);
-	void setup(double p_min, double p_max, double p_step, bool p_no_slider, const String &p_suffix = String());
+	void setup(double p_min, double p_max, double p_step, bool p_hide_slider, const String &p_suffix = String());
 	EditorPropertyProjection();
 };
 
@@ -834,7 +858,7 @@ class EditorPropertyResource : public EditorProperty {
 	bool updating_theme = false;
 	bool opened_editor = false;
 
-	void _resource_selected(const Ref<Resource> &p_resource, bool p_edit);
+	void _resource_selected(const Ref<Resource> &p_resource, bool p_inspect);
 	void _resource_changed(const Ref<Resource> &p_resource);
 
 	void _viewport_selected(const NodePath &p_path);

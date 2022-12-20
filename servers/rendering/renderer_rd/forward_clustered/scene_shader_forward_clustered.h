@@ -32,7 +32,7 @@
 #define SCENE_SHADER_FORWARD_CLUSTERED_H
 
 #include "servers/rendering/renderer_rd/renderer_scene_render_rd.h"
-#include "servers/rendering/renderer_rd/shaders/scene_forward_clustered.glsl.gen.h"
+#include "servers/rendering/renderer_rd/shaders/forward_clustered/scene_forward_clustered.glsl.gen.h"
 
 namespace RendererSceneRenderImplementation {
 
@@ -139,19 +139,15 @@ public:
 		PipelineCacheRD pipelines[CULL_VARIANT_MAX][RS::PRIMITIVE_MAX][PIPELINE_VERSION_MAX];
 		PipelineCacheRD color_pipelines[CULL_VARIANT_MAX][RS::PRIMITIVE_MAX][PIPELINE_COLOR_PASS_FLAG_COUNT];
 
-		String path;
-
-		HashMap<StringName, ShaderLanguage::ShaderNode::Uniform> uniforms;
 		Vector<ShaderCompiler::GeneratedCode::Texture> texture_uniforms;
 
 		Vector<uint32_t> ubo_offsets;
 		uint32_t ubo_size = 0;
 
 		String code;
-		HashMap<StringName, HashMap<int, RID>> default_texture_params;
 
-		DepthDraw depth_draw;
-		DepthTest depth_test;
+		DepthDraw depth_draw = DEPTH_DRAW_OPAQUE;
+		DepthTest depth_test = DEPTH_TEST_ENABLED;
 
 		bool uses_point_size = false;
 		bool uses_alpha = false;
@@ -172,23 +168,20 @@ public:
 		bool uses_depth_texture = false;
 		bool uses_normal_texture = false;
 		bool uses_time = false;
+		bool uses_vertex_time = false;
+		bool uses_fragment_time = false;
 		bool writes_modelview_or_projection = false;
 		bool uses_world_coordinates = false;
+		bool uses_screen_texture_mipmaps = false;
 		Cull cull_mode = CULL_DISABLED;
 
 		uint64_t last_pass = 0;
 		uint32_t index = 0;
 
 		virtual void set_code(const String &p_Code);
-		virtual void set_path_hint(const String &p_path);
-		virtual void set_default_texture_param(const StringName &p_name, RID p_texture, int p_index);
-		virtual void get_shader_uniform_list(List<PropertyInfo> *p_param_list) const;
-		void get_instance_param_list(List<RendererMaterialStorage::InstanceShaderParam> *p_param_list) const;
 
-		virtual bool is_param_texture(const StringName &p_param) const;
 		virtual bool is_animated() const;
 		virtual bool casts_shadows() const;
-		virtual Variant get_default_parameter(const StringName &p_parameter) const;
 		virtual RS::ShaderNativeSourceCode get_native_source_code() const;
 
 		SelfList<ShaderData> shader_list_element;

@@ -32,8 +32,8 @@
 
 #include "core/config/project_settings.h"
 #include "core/os/os.h"
+#include "servers/rendering/rendering_server_globals.h"
 #include "servers/rendering/shader_types.h"
-#include "servers/rendering_server.h"
 
 #define SL ShaderLanguage
 
@@ -373,16 +373,16 @@ void ShaderCompiler::_dump_function_deps(const SL::ShaderNode *p_node, const Str
 static String _get_global_shader_uniform_from_type_and_index(const String &p_buffer, const String &p_index, ShaderLanguage::DataType p_type) {
 	switch (p_type) {
 		case ShaderLanguage::TYPE_BOOL: {
-			return "(" + p_buffer + "[" + p_index + "].x != 0.0)";
+			return "bool(floatBitsToUint(" + p_buffer + "[" + p_index + "].x))";
 		}
 		case ShaderLanguage::TYPE_BVEC2: {
-			return "(notEqual(" + p_buffer + "[" + p_index + "].xy, vec2(0.0)))";
+			return "bvec2(floatBitsToUint(" + p_buffer + "[" + p_index + "].xy))";
 		}
 		case ShaderLanguage::TYPE_BVEC3: {
-			return "(notEqual(" + p_buffer + "[" + p_index + "].xyz, vec3(0.0)))";
+			return "bvec3(floatBitsToUint(" + p_buffer + "[" + p_index + "].xyz))";
 		}
 		case ShaderLanguage::TYPE_BVEC4: {
-			return "(notEqual(" + p_buffer + "[" + p_index + "].xyzw, vec4(0.0)))";
+			return "bvec4(floatBitsToUint(" + p_buffer + "[" + p_index + "].xyzw))";
 		}
 		case ShaderLanguage::TYPE_INT: {
 			return "floatBitsToInt(" + p_buffer + "[" + p_index + "].x)";
@@ -498,6 +498,11 @@ String ShaderCompiler::_dump_node_code(const SL::Node *p_node, int p_level, Gene
 
 			for (const KeyValue<StringName, SL::ShaderNode::Uniform> &E : pnode->uniforms) {
 				if (SL::is_sampler_type(E.value.type)) {
+					if (E.value.hint == SL::ShaderNode::Uniform::HINT_SCREEN_TEXTURE ||
+							E.value.hint == SL::ShaderNode::Uniform::HINT_NORMAL_ROUGHNESS_TEXTURE ||
+							E.value.hint == SL::ShaderNode::Uniform::HINT_DEPTH_TEXTURE) {
+						continue; // Don't create uniforms in the generated code for these.
+					}
 					max_texture_uniforms++;
 				} else {
 					if (E.value.scope == SL::ShaderNode::Uniform::SCOPE_INSTANCE) {
@@ -537,6 +542,13 @@ String ShaderCompiler::_dump_node_code(const SL::Node *p_node, int p_level, Gene
 					p_actions.uniforms->insert(uniform_name, uniform);
 					continue; // Instances are indexed directly, don't need index uniforms.
 				}
+
+				if (uniform.hint == SL::ShaderNode::Uniform::HINT_SCREEN_TEXTURE ||
+						uniform.hint == SL::ShaderNode::Uniform::HINT_NORMAL_ROUGHNESS_TEXTURE ||
+						uniform.hint == SL::ShaderNode::Uniform::HINT_DEPTH_TEXTURE) {
+					continue; // Don't create uniforms in the generated code for these.
+				}
+
 				if (SL::is_sampler_type(uniform.type)) {
 					// Texture layouts are different for OpenGL GLSL and Vulkan GLSL
 					if (!RS::get_singleton()->is_low_end()) {
@@ -892,12 +904,39 @@ String ShaderCompiler::_dump_node_code(const SL::Node *p_node, int p_level, Gene
 
 			if (p_default_actions.renames.has(vnode->name)) {
 				code = p_default_actions.renames[vnode->name];
+				if (vnode->name == "SCREEN_TEXTURE") {
+					r_gen_code.uses_screen_texture_mipmaps = true;
+				}
 			} else {
 				if (shader->uniforms.has(vnode->name)) {
 					//its a uniform!
 					const ShaderLanguage::ShaderNode::Uniform &u = shader->uniforms[vnode->name];
 					if (u.texture_order >= 0) {
-						code = _mkid(vnode->name); //texture, use as is
+						StringName name = vnode->name;
+						if (u.hint == ShaderLanguage::ShaderNode::Uniform::HINT_SCREEN_TEXTURE) {
+							name = "SCREEN_TEXTURE";
+							if (u.filter >= ShaderLanguage::FILTER_NEAREST_MIPMAP) {
+								r_gen_code.uses_screen_texture_mipmaps = true;
+							}
+						} else if (u.hint == ShaderLanguage::ShaderNode::Uniform::HINT_NORMAL_ROUGHNESS_TEXTURE) {
+							name = "NORMAL_ROUGHNESS_TEXTURE";
+						} else if (u.hint == ShaderLanguage::ShaderNode::Uniform::HINT_DEPTH_TEXTURE) {
+							name = "DEPTH_TEXTURE";
+						} else {
+							name = _mkid(vnode->name); //texture, use as is
+						}
+
+						if (p_default_actions.renames.has(name)) {
+							code = p_default_actions.renames[name];
+						} else {
+							code = name;
+						}
+
+						if (p_actions.usage_flag_pointers.has(name) && !used_flag_pointers.has(name)) {
+							*p_actions.usage_flag_pointers[name] = true;
+							used_flag_pointers.insert(name);
+						}
+
 					} else {
 						//a scalar or vector
 						if (u.scope == ShaderLanguage::ShaderNode::Uniform::SCOPE_GLOBAL) {
@@ -1102,8 +1141,18 @@ String ShaderCompiler::_dump_node_code(const SL::Node *p_node, int p_level, Gene
 				case SL::OP_STRUCT:
 				case SL::OP_CONSTRUCT: {
 					ERR_FAIL_COND_V(onode->arguments[0]->type != SL::Node::TYPE_VARIABLE, String());
+					const SL::VariableNode *vnode = static_cast<const SL::VariableNode *>(onode->arguments[0]);
+					const SL::FunctionNode *func = nullptr;
+					const bool is_internal_func = internal_functions.has(vnode->name);
 
-					SL::VariableNode *vnode = (SL::VariableNode *)onode->arguments[0];
+					if (!is_internal_func) {
+						for (int i = 0; i < shader->functions.size(); i++) {
+							if (shader->functions[i].name == vnode->name) {
+								func = shader->functions[i].function;
+								break;
+							}
+						}
+					}
 
 					bool is_texture_func = false;
 					bool is_screen_texture = false;
@@ -1117,7 +1166,7 @@ String ShaderCompiler::_dump_node_code(const SL::Node *p_node, int p_level, Gene
 							used_flag_pointers.insert(vnode->name);
 						}
 
-						if (internal_functions.has(vnode->name)) {
+						if (is_internal_func) {
 							code += vnode->name;
 							is_texture_func = texture_functions.has(vnode->name);
 						} else if (p_default_actions.renames.has(vnode->name)) {
@@ -1133,6 +1182,44 @@ String ShaderCompiler::_dump_node_code(const SL::Node *p_node, int p_level, Gene
 						if (i > 1) {
 							code += ", ";
 						}
+
+						bool is_out_qualifier = false;
+						if (is_internal_func) {
+							is_out_qualifier = SL::is_builtin_func_out_parameter(vnode->name, i - 1);
+						} else if (func != nullptr) {
+							const SL::ArgumentQualifier qualifier = func->arguments[i - 1].qualifier;
+							is_out_qualifier = qualifier == SL::ARGUMENT_QUALIFIER_OUT || qualifier == SL::ARGUMENT_QUALIFIER_INOUT;
+						}
+
+						if (is_out_qualifier) {
+							StringName name;
+							bool found = false;
+							{
+								const SL::Node *node = onode->arguments[i];
+
+								bool done = false;
+								do {
+									switch (node->type) {
+										case SL::Node::TYPE_VARIABLE: {
+											name = static_cast<const SL::VariableNode *>(node)->name;
+											done = true;
+											found = true;
+										} break;
+										case SL::Node::TYPE_MEMBER: {
+											node = static_cast<const SL::MemberNode *>(node)->owner;
+										} break;
+										default: {
+											done = true;
+										} break;
+									}
+								} while (!done);
+							}
+
+							if (found && p_actions.write_flag_pointers.has(name)) {
+								*p_actions.write_flag_pointers[name] = true;
+							}
+						}
+
 						String node_code = _dump_node_code(onode->arguments[i], p_level, r_gen_code, p_actions, p_default_actions, p_assigning);
 						if (!RS::get_singleton()->is_low_end() && is_texture_func && i == 1) {
 							//need to map from texture to sampler in order to sample when using Vulkan GLSL
@@ -1155,6 +1242,7 @@ String ShaderCompiler::_dump_node_code(const SL::Node *p_node, int p_level, Gene
 							}
 
 							if (correct_texture_uniform) {
+								//TODO Needs to detect screen_texture hint as well
 								is_screen_texture = (texture_uniform == "SCREEN_TEXTURE");
 
 								String sampler_name;
@@ -1308,8 +1396,8 @@ String ShaderCompiler::_dump_node_code(const SL::Node *p_node, int p_level, Gene
 	return code;
 }
 
-ShaderLanguage::DataType ShaderCompiler::_get_variable_type(const StringName &p_type) {
-	RS::GlobalShaderUniformType gvt = RS::get_singleton()->global_shader_uniform_get_type(p_type);
+ShaderLanguage::DataType ShaderCompiler::_get_global_shader_uniform_type(const StringName &p_name) {
+	RS::GlobalShaderParameterType gvt = RSG::material_storage->global_shader_parameter_get_type(p_name);
 	return (ShaderLanguage::DataType)RS::global_shader_uniform_type_get_shader_datatype(gvt);
 }
 
@@ -1318,7 +1406,7 @@ Error ShaderCompiler::compile(RS::ShaderMode p_mode, const String &p_code, Ident
 	info.functions = ShaderTypes::get_singleton()->get_functions(p_mode);
 	info.render_modes = ShaderTypes::get_singleton()->get_modes(p_mode);
 	info.shader_types = ShaderTypes::get_singleton()->get_types();
-	info.global_shader_uniform_type_func = _get_variable_type;
+	info.global_shader_uniform_type_func = _get_global_shader_uniform_type;
 
 	Error err = parser.compile(p_code, info);
 
@@ -1329,11 +1417,11 @@ Error ShaderCompiler::compile(RS::ShaderMode p_mode, const String &p_code, Ident
 		HashMap<String, Vector<String>> includes;
 		includes[""] = Vector<String>();
 		Vector<String> include_stack;
-		Vector<String> shader = p_code.split("\n");
+		Vector<String> shader_lines = p_code.split("\n");
 
 		// Reconstruct the files.
-		for (int i = 0; i < shader.size(); i++) {
-			String l = shader[i];
+		for (int i = 0; i < shader_lines.size(); i++) {
+			String l = shader_lines[i];
 			if (l.begins_with("@@>")) {
 				String inc_path = l.replace_first("@@>", "");
 
@@ -1404,6 +1492,7 @@ Error ShaderCompiler::compile(RS::ShaderMode p_mode, const String &p_code, Ident
 	r_gen_code.uses_fragment_time = false;
 	r_gen_code.uses_vertex_time = false;
 	r_gen_code.uses_global_textures = false;
+	r_gen_code.uses_screen_texture_mipmaps = false;
 
 	used_name_defines.clear();
 	used_rmode_defines.clear();
@@ -1434,8 +1523,11 @@ void ShaderCompiler::initialize(DefaultIdentifierActions p_actions) {
 	texture_functions.insert("textureLod");
 	texture_functions.insert("textureProjLod");
 	texture_functions.insert("textureGrad");
+	texture_functions.insert("textureProjGrad");
 	texture_functions.insert("textureGather");
 	texture_functions.insert("textureSize");
+	texture_functions.insert("textureQueryLod");
+	texture_functions.insert("textureQueryLevels");
 	texture_functions.insert("texelFetch");
 }
 

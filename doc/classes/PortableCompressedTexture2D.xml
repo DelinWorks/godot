@@ -15,14 +15,14 @@
 	<methods>
 		<method name="create_from_image">
 			<return type="void" />
-			<argument index="0" name="image" type="Image" />
-			<argument index="1" name="compression_mode" type="int" enum="PortableCompressedTexture2D.CompressionMode" />
-			<argument index="2" name="normal_map" type="bool" default="false" />
-			<argument index="3" name="lossy_quality" type="float" default="0.8" />
+			<param index="0" name="image" type="Image" />
+			<param index="1" name="compression_mode" type="int" enum="PortableCompressedTexture2D.CompressionMode" />
+			<param index="2" name="normal_map" type="bool" default="false" />
+			<param index="3" name="lossy_quality" type="float" default="0.8" />
 			<description>
 				Initializes the compressed texture from a base image. The compression mode must be provided.
-				If this image will be used as a normal map, the "normal map" flag is recommended, to ensure optimum quality.
-				If lossy compression is requested, the quality setting can optionally be provided. This maps to Lossy WEBP compression quality.
+				[param normal_map] is recommended to ensure optimum quality if this image will be used as a normal map.
+				If lossy compression is requested, the quality setting can optionally be provided. This maps to Lossy WebP compression quality.
 			</description>
 		</method>
 		<method name="get_compression_mode" qualifiers="const">
@@ -45,7 +45,7 @@
 		</method>
 		<method name="set_keep_all_compressed_buffers" qualifiers="static">
 			<return type="void" />
-			<argument index="0" name="keep" type="bool" />
+			<param index="0" name="keep" type="bool" />
 			<description>
 				Overrides the flag globally for all textures of this type. This is used primarily by the editor.
 			</description>
@@ -58,6 +58,7 @@
 			When running on the editor, this class will keep the source compressed data in memory. Otherwise, the source compressed data is lost after loading and the resource can't be re saved.
 			This flag allows to keep the compressed data in memory if you intend it to persist after loading.
 		</member>
+		<member name="resource_local_to_scene" type="bool" setter="set_local_to_scene" getter="is_local_to_scene" overrides="Resource" default="false" />
 		<member name="size_override" type="Vector2" setter="set_size_override" getter="get_size_override" default="Vector2(0, 0)">
 			Allow overriding the texture size (for 2D only).
 		</member>

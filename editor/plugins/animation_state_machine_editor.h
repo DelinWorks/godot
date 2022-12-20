@@ -31,20 +31,23 @@
 #ifndef ANIMATION_STATE_MACHINE_EDITOR_H
 #define ANIMATION_STATE_MACHINE_EDITOR_H
 
-#include "editor/editor_plugin.h"
 #include "editor/plugins/animation_tree_editor_plugin.h"
 #include "scene/animation/animation_node_state_machine.h"
-#include "scene/gui/button.h"
 #include "scene/gui/graph_edit.h"
 #include "scene/gui/popup.h"
 #include "scene/gui/tree.h"
 
+class ConfirmationDialog;
 class EditorFileDialog;
+class OptionButton;
+class PanelContainer;
 
 class AnimationNodeStateMachineEditor : public AnimationTreeNodeEditorPlugin {
 	GDCLASS(AnimationNodeStateMachineEditor, AnimationTreeNodeEditorPlugin);
 
 	Ref<AnimationNodeStateMachine> state_machine;
+
+	bool read_only = false;
 
 	Button *tool_select = nullptr;
 	Button *tool_create = nullptr;
@@ -76,8 +79,6 @@ class AnimationNodeStateMachineEditor : public AnimationTreeNodeEditorPlugin {
 
 	bool updating = false;
 
-	UndoRedo *undo_redo = nullptr;
-
 	static AnimationNodeStateMachineEditor *singleton;
 
 	void _state_machine_gui_input(const Ref<InputEvent> &p_event);
@@ -97,8 +98,8 @@ class AnimationNodeStateMachineEditor : public AnimationTreeNodeEditorPlugin {
 
 	Vector2 add_node_pos;
 
-	ConfirmationDialog *delete_window;
-	Tree *delete_tree;
+	ConfirmationDialog *delete_window = nullptr;
+	Tree *delete_tree = nullptr;
 
 	bool box_selecting = false;
 	Point2 box_selecting_from;
@@ -114,6 +115,7 @@ class AnimationNodeStateMachineEditor : public AnimationTreeNodeEditorPlugin {
 	StringName snap_y;
 
 	bool connecting = false;
+	bool connection_follows_cursor = false;
 	StringName connecting_from;
 	Vector2 connecting_to;
 	StringName connecting_to_node;

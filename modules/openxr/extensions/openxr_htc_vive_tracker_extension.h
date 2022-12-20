@@ -41,6 +41,7 @@ public:
 	virtual ~OpenXRHTCViveTrackerExtension() override;
 
 	bool is_available();
+
 	virtual bool on_event_polled(const XrEventDataBuffer &event) override;
 
 private:

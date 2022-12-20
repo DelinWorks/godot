@@ -156,7 +156,7 @@ private:
 	real_t spread = 45.0;
 	real_t flatness = 0.0;
 
-	real_t parameters_min[PARAM_MAX];
+	real_t parameters_min[PARAM_MAX] = {};
 	real_t parameters_max[PARAM_MAX] = {};
 
 	Ref<Curve> curve_parameters[PARAM_MAX];
@@ -198,7 +198,7 @@ private:
 protected:
 	static void _bind_methods();
 	void _notification(int p_what);
-	virtual void _validate_property(PropertyInfo &property) const override;
+	void _validate_property(PropertyInfo &p_property) const;
 
 public:
 	AABB get_aabb() const override;
@@ -302,7 +302,7 @@ public:
 	void set_gravity(const Vector3 &p_gravity);
 	Vector3 get_gravity() const;
 
-	TypedArray<String> get_configuration_warnings() const override;
+	PackedStringArray get_configuration_warnings() const override;
 
 	void restart();
 

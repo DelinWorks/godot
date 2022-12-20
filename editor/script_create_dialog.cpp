@@ -107,7 +107,15 @@ static Vector<String> _get_hierarchy(String p_class_name) {
 
 void ScriptCreateDialog::_notification(int p_what) {
 	switch (p_what) {
-		case NOTIFICATION_ENTER_TREE: {
+		case NOTIFICATION_ENTER_TREE:
+		case NOTIFICATION_THEME_CHANGED: {
+			for (int i = 0; i < ScriptServer::get_language_count(); i++) {
+				Ref<Texture2D> language_icon = get_theme_icon(ScriptServer::get_language(i)->get_type(), SNAME("EditorIcons"));
+				if (language_icon.is_valid()) {
+					language_menu->set_item_icon(i, language_icon);
+				}
+			}
+
 			String last_language = EditorSettings::get_singleton()->get_project_metadata("script_setup", "last_selected_language", "");
 			if (!last_language.is_empty()) {
 				for (int i = 0; i < language_menu->get_item_count(); i++) {
@@ -120,21 +128,15 @@ void ScriptCreateDialog::_notification(int p_what) {
 			} else {
 				language_menu->select(default_language);
 			}
-
-			[[fallthrough]];
-		}
-		case NOTIFICATION_THEME_CHANGED: {
-			for (int i = 0; i < ScriptServer::get_language_count(); i++) {
-				Ref<Texture2D> language_icon = get_theme_icon(ScriptServer::get_language(i)->get_type(), SNAME("EditorIcons"));
-				if (language_icon.is_valid()) {
-					language_menu->set_item_icon(i, language_icon);
-				}
+			if (EditorSettings::get_singleton()->has_meta("script_setup_use_script_templates")) {
+				is_using_templates = bool(EditorSettings::get_singleton()->get_meta("script_setup_use_script_templates"));
+				use_templates->set_pressed(is_using_templates);
 			}
 
 			path_button->set_icon(get_theme_icon(SNAME("Folder"), SNAME("EditorIcons")));
 			parent_browse_button->set_icon(get_theme_icon(SNAME("Folder"), SNAME("EditorIcons")));
 			parent_search_button->set_icon(get_theme_icon(SNAME("ClassList"), SNAME("EditorIcons")));
-			status_panel->add_theme_style_override("panel", get_theme_stylebox(SNAME("bg"), SNAME("Tree")));
+			status_panel->add_theme_style_override("panel", get_theme_stylebox(SNAME("panel"), SNAME("Tree")));
 		} break;
 	}
 }
@@ -166,6 +168,7 @@ void ScriptCreateDialog::config(const String &p_base_name, const String &p_base_
 	class_name->deselect();
 	parent_name->set_text(p_base_name);
 	parent_name->deselect();
+	internal_name->set_text("");
 
 	if (!p_base_path.is_empty()) {
 		initial_bp = p_base_path.get_basename();
@@ -201,7 +204,7 @@ bool ScriptCreateDialog::_validate_parent(const String &p_string) {
 		}
 	}
 
-	return ClassDB::class_exists(p_string) || ScriptServer::is_global_class(p_string);
+	return EditorNode::get_editor_data().is_type_recognized(p_string);
 }
 
 bool ScriptCreateDialog::_validate_class(const String &p_string) {
@@ -274,7 +277,6 @@ String ScriptCreateDialog::_validate_path(const String &p_path, bool p_file_must
 
 	bool found = false;
 	bool match = false;
-	int index = 0;
 	for (const String &E : extensions) {
 		if (E.nocasecmp_to(extension) == 0) {
 			found = true;
@@ -283,7 +285,6 @@ String ScriptCreateDialog::_validate_path(const String &p_path, bool p_file_must
 			}
 			break;
 		}
-		index++;
 	}
 
 	if (!found) {
@@ -332,7 +333,12 @@ void ScriptCreateDialog::_template_changed(int p_template) {
 			EditorSettings::get_singleton()->set_project_metadata("script_setup", "templates_dictionary", dic_templates_project);
 		} else {
 			// Save template info to editor dictionary (not a project template).
-			templates_dictionary[parent_name->get_text()] = sinfo.get_hash();
+			Dictionary dic_templates;
+			if (EditorSettings::get_singleton()->has_meta("script_setup_templates_dictionary")) {
+				dic_templates = (Dictionary)EditorSettings::get_singleton()->get_meta("script_setup_templates_dictionary");
+			}
+			dic_templates[parent_name->get_text()] = sinfo.get_hash();
+			EditorSettings::get_singleton()->set_meta("script_setup_templates_dictionary", dic_templates);
 			// Remove template from project dictionary as we last used an editor level template.
 			Dictionary dic_templates_project = EditorSettings::get_singleton()->get_project_metadata("script_setup", "templates_dictionary", Dictionary());
 			if (dic_templates_project.has(parent_name->get_text())) {
@@ -371,7 +377,15 @@ void ScriptCreateDialog::_create_new() {
 
 	const ScriptLanguage::ScriptTemplate sinfo = _get_current_template();
 
-	scr = ScriptServer::get_language(language_menu->get_selected())->make_template(sinfo.content, cname_param, parent_name->get_text());
+	String parent_class = parent_name->get_text();
+	if (!parent_name->get_text().is_quoted() && !ClassDB::class_exists(parent_class) && !ScriptServer::is_global_class(parent_class)) {
+		// If base is a custom type, replace with script path instead.
+		const EditorData::CustomType *type = EditorNode::get_editor_data().get_custom_type_by_name(parent_class);
+		ERR_FAIL_NULL(type);
+		parent_class = "\"" + type->script->get_path() + "\"";
+	}
+
+	scr = ScriptServer::get_language(language_menu->get_selected())->make_template(sinfo.content, cname_param, parent_class);
 
 	if (has_named_classes) {
 		String cname = class_name->get_text();
@@ -473,6 +487,7 @@ void ScriptCreateDialog::_built_in_pressed() {
 
 void ScriptCreateDialog::_use_template_pressed() {
 	is_using_templates = use_templates->is_pressed();
+	EditorSettings::get_singleton()->set_meta("script_setup_use_script_templates", is_using_templates);
 	_update_dialog();
 }
 
@@ -590,6 +605,10 @@ void ScriptCreateDialog::_update_template_menu() {
 	if (is_language_using_templates) {
 		// Get the latest templates used for each type of node from project settings then global settings.
 		Dictionary last_local_templates = EditorSettings::get_singleton()->get_project_metadata("script_setup", "templates_dictionary", Dictionary());
+		Dictionary last_global_templates;
+		if (EditorSettings::get_singleton()->has_meta("script_setup_templates_dictionary")) {
+			last_global_templates = (Dictionary)EditorSettings::get_singleton()->get_meta("script_setup_templates_dictionary");
+		}
 		String inherits_base_type = parent_name->get_text();
 
 		// If it inherits from a script, get its parent class first.
@@ -644,7 +663,7 @@ void ScriptCreateDialog::_update_template_menu() {
 						// Check for last used template for this node in project settings then in global settings.
 						if (last_local_templates.has(parent_name->get_text()) && t.get_hash() == String(last_local_templates[parent_name->get_text()])) {
 							last_used_template = id;
-						} else if (last_used_template == -1 && templates_dictionary.has(parent_name->get_text()) && t.get_hash() == String(templates_dictionary[parent_name->get_text()])) {
+						} else if (last_used_template == -1 && last_global_templates.has(parent_name->get_text()) && t.get_hash() == String(last_global_templates[parent_name->get_text()])) {
 							last_used_template = id;
 						}
 						t.id = id;
@@ -819,11 +838,11 @@ ScriptLanguage::ScriptTemplate ScriptCreateDialog::_get_current_template() const
 	return ScriptLanguage::ScriptTemplate();
 }
 
-Vector<ScriptLanguage::ScriptTemplate> ScriptCreateDialog::_get_user_templates(const ScriptLanguage *language, const StringName &p_object, const String &p_dir, const ScriptLanguage::TemplateLocation &p_origin) const {
+Vector<ScriptLanguage::ScriptTemplate> ScriptCreateDialog::_get_user_templates(const ScriptLanguage *p_language, const StringName &p_object, const String &p_dir, const ScriptLanguage::TemplateLocation &p_origin) const {
 	Vector<ScriptLanguage::ScriptTemplate> user_templates;
-	String extension = language->get_extension();
+	String extension = p_language->get_extension();
 
-	String dir_path = p_dir.plus_file(p_object);
+	String dir_path = p_dir.path_join(p_object);
 
 	Ref<DirAccess> d = DirAccess::open(dir_path);
 	if (d.is_valid()) {
@@ -831,7 +850,7 @@ Vector<ScriptLanguage::ScriptTemplate> ScriptCreateDialog::_get_user_templates(c
 		String file = d->get_next();
 		while (file != String()) {
 			if (file.get_extension() == extension) {
-				user_templates.append(_parse_template(language, dir_path, file, p_origin, p_object));
+				user_templates.append(_parse_template(p_language, dir_path, file, p_origin, p_object));
 			}
 			file = d->get_next();
 		}
@@ -840,15 +859,15 @@ Vector<ScriptLanguage::ScriptTemplate> ScriptCreateDialog::_get_user_templates(c
 	return user_templates;
 }
 
-ScriptLanguage::ScriptTemplate ScriptCreateDialog::_parse_template(const ScriptLanguage *language, const String &p_path, const String &p_filename, const ScriptLanguage::TemplateLocation &p_origin, const String &p_inherits) const {
+ScriptLanguage::ScriptTemplate ScriptCreateDialog::_parse_template(const ScriptLanguage *p_language, const String &p_path, const String &p_filename, const ScriptLanguage::TemplateLocation &p_origin, const String &p_inherits) const {
 	ScriptLanguage::ScriptTemplate script_template = ScriptLanguage::ScriptTemplate();
 	script_template.origin = p_origin;
 	script_template.inherit = p_inherits;
 	String space_indent = "    ";
 	// Get meta delimiter
-	String meta_delimiter = String();
+	String meta_delimiter;
 	List<String> comment_delimiters;
-	language->get_comment_delimiters(&comment_delimiters);
+	p_language->get_comment_delimiters(&comment_delimiters);
 	for (const String &script_delimiter : comment_delimiters) {
 		if (!script_delimiter.contains(" ")) {
 			meta_delimiter = script_delimiter;
@@ -859,7 +878,7 @@ ScriptLanguage::ScriptTemplate ScriptCreateDialog::_parse_template(const ScriptL
 
 	// Parse file for meta-information and script content
 	Error err;
-	Ref<FileAccess> file = FileAccess::open(p_path.plus_file(p_filename), FileAccess::READ, &err);
+	Ref<FileAccess> file = FileAccess::open(p_path.path_join(p_filename), FileAccess::READ, &err);
 	if (!err) {
 		while (!file->eof_reached()) {
 			String line = file->get_line();
@@ -897,7 +916,7 @@ ScriptLanguage::ScriptTemplate ScriptCreateDialog::_parse_template(const ScriptL
 
 	// Get name from file name if no name in meta information
 	if (script_template.name == String()) {
-		script_template.name = p_filename.get_basename().replace("_", " ").capitalize();
+		script_template.name = p_filename.get_basename().capitalize();
 	}
 
 	return script_template;

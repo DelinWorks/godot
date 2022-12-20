@@ -31,21 +31,29 @@
 #ifndef ANIMATION_BLEND_TREE_EDITOR_PLUGIN_H
 #define ANIMATION_BLEND_TREE_EDITOR_PLUGIN_H
 
-#include "editor/editor_plugin.h"
 #include "editor/plugins/animation_tree_editor_plugin.h"
 #include "scene/animation/animation_blend_tree.h"
 #include "scene/gui/button.h"
 #include "scene/gui/graph_edit.h"
+#include "scene/gui/panel_container.h"
 #include "scene/gui/popup.h"
 #include "scene/gui/tree.h"
 
+class AcceptDialog;
+class CheckBox;
 class ProgressBar;
 class EditorFileDialog;
+class EditorProperty;
+class MenuButton;
+class PanelContainer;
 
 class AnimationNodeBlendTreeEditor : public AnimationTreeNodeEditorPlugin {
 	GDCLASS(AnimationNodeBlendTreeEditor, AnimationTreeNodeEditorPlugin);
 
 	Ref<AnimationNodeBlendTree> blend_tree;
+
+	bool read_only = false;
+
 	GraphEdit *graph = nullptr;
 	MenuButton *add_node = nullptr;
 	Vector2 position_from_popup_menu;
@@ -53,8 +61,6 @@ class AnimationNodeBlendTreeEditor : public AnimationTreeNodeEditorPlugin {
 
 	PanelContainer *error_panel = nullptr;
 	Label *error_label = nullptr;
-
-	UndoRedo *undo_redo = nullptr;
 
 	AcceptDialog *filter_dialog = nullptr;
 	Tree *filters = nullptr;
@@ -66,8 +72,6 @@ class AnimationNodeBlendTreeEditor : public AnimationTreeNodeEditorPlugin {
 	String to_node = "";
 	int to_slot = -1;
 	String from_node = "";
-
-	void _update_graph();
 
 	struct AddOption {
 		String name;
@@ -90,8 +94,11 @@ class AnimationNodeBlendTreeEditor : public AnimationTreeNodeEditorPlugin {
 
 	void _node_dragged(const Vector2 &p_from, const Vector2 &p_to, const StringName &p_which);
 	void _node_renamed(const String &p_text, Ref<AnimationNode> p_node);
-	void _node_renamed_focus_out(Node *le, Ref<AnimationNode> p_node);
+	void _node_renamed_focus_out(Ref<AnimationNode> p_node);
+	void _node_rename_lineedit_changed(const String &p_text);
+	void _node_changed(const StringName &p_node_name);
 
+	String current_node_rename_text;
 	bool updating;
 
 	void _connection_request(const String &p_from, int p_from_index, const String &p_to, int p_to_index);
@@ -105,12 +112,12 @@ class AnimationNodeBlendTreeEditor : public AnimationTreeNodeEditorPlugin {
 	void _delete_nodes_request(const TypedArray<StringName> &p_nodes);
 
 	bool _update_filters(const Ref<AnimationNode> &anode);
-	void _edit_filters(const String &p_which);
+	void _inspect_filters(const String &p_which);
 	void _filter_edited();
 	void _filter_toggled();
 	Ref<AnimationNode> _filter_edit;
 
-	void _popup(bool p_has_input_ports, const Vector2 &p_popup_position, const Vector2 &p_node_position);
+	void _popup(bool p_has_input_ports, const Vector2 &p_node_position);
 	void _popup_request(const Vector2 &p_position);
 	void _connection_to_empty(const String &p_from, int p_from_slot, const Vector2 &p_release_position);
 	void _connection_from_empty(const String &p_to, int p_to_slot, const Vector2 &p_release_position);
@@ -145,6 +152,8 @@ public:
 
 	virtual bool can_edit(const Ref<AnimationNode> &p_node) override;
 	virtual void edit(const Ref<AnimationNode> &p_node) override;
+
+	void update_graph();
 
 	AnimationNodeBlendTreeEditor();
 };

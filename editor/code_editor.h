@@ -92,7 +92,7 @@ class FindReplaceBar : public HBoxContainer {
 	bool replace_all_mode = false;
 	bool preserve_cursor = false;
 
-	void _get_search_from(int &r_line, int &r_col);
+	void _get_search_from(int &r_line, int &r_col, bool p_is_searching_next = false);
 	void _update_results_count();
 	void _update_matches_label();
 
@@ -158,6 +158,7 @@ class CodeTextEditor : public VBoxContainer {
 	Label *info = nullptr;
 	Timer *idle = nullptr;
 	Timer *code_complete_timer = nullptr;
+	int code_complete_timer_line = 0;
 
 	Timer *font_resize_timer = nullptr;
 	int font_resize_val;
@@ -197,7 +198,7 @@ class CodeTextEditor : public VBoxContainer {
 
 	void _update_status_bar_theme();
 
-	void _delete_line(int p_line);
+	void _delete_line(int p_line, int p_caret);
 	void _toggle_scripts_pressed();
 
 protected:
@@ -246,6 +247,7 @@ public:
 
 	Variant get_edit_state();
 	void set_edit_state(const Variant &p_state);
+	Variant get_navigation_state();
 
 	void set_error_count(int p_error_count);
 	void set_warning_count(int p_warning_count);

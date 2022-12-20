@@ -40,13 +40,15 @@
 
 #include "vulkan_context_ios.h"
 
-#import <QuartzCore/CAMetalLayer.h>
 #ifdef USE_VOLK
 #include <volk.h>
 #else
 #include <vulkan/vulkan.h>
 #endif
 #endif
+
+#import <Foundation/Foundation.h>
+#import <QuartzCore/CAMetalLayer.h>
 
 class DisplayServerIOS : public DisplayServer {
 	GDCLASS(DisplayServerIOS, DisplayServer)
@@ -73,7 +75,7 @@ class DisplayServerIOS : public DisplayServer {
 
 	void perform_event(const Ref<InputEvent> &p_event);
 
-	DisplayServerIOS(const String &p_rendering_driver, DisplayServer::WindowMode p_mode, DisplayServer::VSyncMode p_vsync_mode, uint32_t p_flags, const Vector2i &p_resolution, Error &r_error);
+	DisplayServerIOS(const String &p_rendering_driver, DisplayServer::WindowMode p_mode, DisplayServer::VSyncMode p_vsync_mode, uint32_t p_flags, const Vector2i *p_position, const Vector2i &p_resolution, Error &r_error);
 	~DisplayServerIOS();
 
 public:
@@ -82,7 +84,7 @@ public:
 	static DisplayServerIOS *get_singleton();
 
 	static void register_ios_driver();
-	static DisplayServer *create_func(const String &p_rendering_driver, WindowMode p_mode, DisplayServer::VSyncMode p_vsync_mode, uint32_t p_flags, const Vector2i &p_resolution, Error &r_error);
+	static DisplayServer *create_func(const String &p_rendering_driver, WindowMode p_mode, DisplayServer::VSyncMode p_vsync_mode, uint32_t p_flags, const Vector2i *p_position, const Vector2i &p_resolution, Error &r_error);
 	static Vector<String> get_rendering_drivers_func();
 
 	// MARK: - Events
@@ -111,7 +113,7 @@ public:
 
 	// MARK: Keyboard
 
-	void key(Key p_key, bool p_pressed);
+	void key(Key p_key, char32_t p_char, bool p_pressed);
 
 	// MARK: Motion
 
@@ -127,7 +129,7 @@ public:
 
 	virtual bool tts_is_speaking() const override;
 	virtual bool tts_is_paused() const override;
-	virtual Array tts_get_voices() const override;
+	virtual TypedArray<Dictionary> tts_get_voices() const override;
 
 	virtual void tts_speak(const String &p_text, const String &p_voice, int p_volume = 50, float p_pitch = 1.f, float p_rate = 1.f, int p_utterance_id = 0, bool p_interrupt = false) override;
 	virtual void tts_pause() override;
@@ -160,6 +162,7 @@ public:
 	virtual void window_set_current_screen(int p_screen, WindowID p_window = MAIN_WINDOW_ID) override;
 
 	virtual Point2i window_get_position(WindowID p_window = MAIN_WINDOW_ID) const override;
+	virtual Point2i window_get_position_with_decorations(WindowID p_window = MAIN_WINDOW_ID) const override;
 	virtual void window_set_position(const Point2i &p_position, WindowID p_window = MAIN_WINDOW_ID) override;
 
 	virtual void window_set_transient(WindowID p_window, WindowID p_parent) override;
@@ -172,7 +175,7 @@ public:
 
 	virtual void window_set_size(const Size2i p_size, WindowID p_window = MAIN_WINDOW_ID) override;
 	virtual Size2i window_get_size(WindowID p_window = MAIN_WINDOW_ID) const override;
-	virtual Size2i window_get_real_size(WindowID p_window = MAIN_WINDOW_ID) const override;
+	virtual Size2i window_get_size_with_decorations(WindowID p_window = MAIN_WINDOW_ID) const override;
 
 	virtual void window_set_mode(WindowMode p_mode, WindowID p_window = MAIN_WINDOW_ID) override;
 	virtual WindowMode window_get_mode(WindowID p_window = MAIN_WINDOW_ID) const override;
@@ -197,7 +200,7 @@ public:
 	virtual void window_set_vsync_mode(DisplayServer::VSyncMode p_vsync_mode, WindowID p_window = MAIN_WINDOW_ID) override;
 	virtual DisplayServer::VSyncMode window_get_vsync_mode(WindowID p_vsync_mode) const override;
 
-	virtual bool screen_is_touchscreen(int p_screen) const override;
+	virtual bool is_touchscreen_available() const override;
 
 	virtual void virtual_keyboard_show(const String &p_existing_text, const Rect2 &p_screen_rect, VirtualKeyboardType p_type, int p_max_length, int p_cursor_start, int p_cursor_end) override;
 	virtual void virtual_keyboard_hide() override;

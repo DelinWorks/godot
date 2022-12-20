@@ -39,9 +39,8 @@ class CanvasItemEditor;
 class Cast2DEditor : public Control {
 	GDCLASS(Cast2DEditor, Control);
 
-	UndoRedo *undo_redo = nullptr;
 	CanvasItemEditor *canvas_item_editor = nullptr;
-	Node2D *node;
+	Node2D *node = nullptr;
 
 	bool pressed = false;
 	Point2 original_target_position;
@@ -54,8 +53,6 @@ public:
 	bool forward_canvas_gui_input(const Ref<InputEvent> &p_event);
 	void forward_canvas_draw_over_viewport(Control *p_overlay);
 	void edit(Node2D *p_node);
-
-	Cast2DEditor();
 };
 
 class Cast2DEditorPlugin : public EditorPlugin {

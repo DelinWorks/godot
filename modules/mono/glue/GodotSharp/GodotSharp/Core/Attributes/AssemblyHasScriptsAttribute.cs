@@ -1,32 +1,50 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
+
+#nullable enable
 
 namespace Godot
 {
     /// <summary>
-    /// An attribute that determines if an assembly has scripts. If so, what types of scripts the assembly has.
+    /// Attribute that determines that the assembly contains Godot scripts and, optionally, the
+    /// collection of types that implement scripts; otherwise, retrieving the types requires lookup.
     /// </summary>
     [AttributeUsage(AttributeTargets.Assembly)]
     public class AssemblyHasScriptsAttribute : Attribute
     {
-        private readonly bool requiresLookup;
-        private readonly System.Type[] scriptTypes;
+        /// <summary>
+        /// If the Godot scripts contained in the assembly require lookup
+        /// and can't rely on <see cref="ScriptTypes"/>.
+        /// </summary>
+        [MemberNotNullWhen(false, nameof(ScriptTypes))]
+        public bool RequiresLookup { get; }
 
         /// <summary>
-        /// Constructs a new AssemblyHasScriptsAttribute instance.
+        /// The collection of types that implement a Godot script.
+        /// </summary>
+        public Type[]? ScriptTypes { get; }
+
+        /// <summary>
+        /// Constructs a new AssemblyHasScriptsAttribute instance
+        /// that requires lookup to get the Godot scripts.
         /// </summary>
         public AssemblyHasScriptsAttribute()
         {
-            requiresLookup = true;
+            RequiresLookup = true;
+            ScriptTypes = null;
         }
 
         /// <summary>
-        /// Constructs a new AssemblyHasScriptsAttribute instance.
+        /// Constructs a new AssemblyHasScriptsAttribute instance
+        /// that includes the Godot script types and requires no lookup.
         /// </summary>
-        /// <param name="scriptTypes">The specified type(s) of scripts.</param>
-        public AssemblyHasScriptsAttribute(System.Type[] scriptTypes)
+        /// <param name="scriptTypes">The collection of types that implement a Godot script.</param>
+        public AssemblyHasScriptsAttribute(Type[] scriptTypes)
         {
-            requiresLookup = false;
-            this.scriptTypes = scriptTypes;
+            RequiresLookup = false;
+            ScriptTypes = scriptTypes;
         }
     }
 }
+
+#nullable restore

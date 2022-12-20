@@ -74,23 +74,41 @@ struct ContainerTypeValidate {
 		return true;
 	}
 
-	_FORCE_INLINE_ bool validate(const Variant &p_variant, const char *p_operation = "use") {
+	// Coerces String and StringName into each other when needed.
+	_FORCE_INLINE_ bool validate(Variant &inout_variant, const char *p_operation = "use") {
 		if (type == Variant::NIL) {
 			return true;
 		}
 
-		ERR_FAIL_COND_V_MSG(type != p_variant.get_type(), false, "Attempted to " + String(p_operation) + " a variable of type '" + Variant::get_type_name(p_variant.get_type()) + "' into a " + where + " of type '" + Variant::get_type_name(type) + "'.");
-		if (type != p_variant.get_type()) {
-			return false;
+		if (type != inout_variant.get_type()) {
+			if (inout_variant.get_type() == Variant::NIL && type == Variant::OBJECT) {
+				return true;
+			}
+			if (type == Variant::STRING && inout_variant.get_type() == Variant::STRING_NAME) {
+				inout_variant = String(inout_variant);
+				return true;
+			} else if (type == Variant::STRING_NAME && inout_variant.get_type() == Variant::STRING) {
+				inout_variant = StringName(inout_variant);
+				return true;
+			}
+
+			ERR_FAIL_V_MSG(false, "Attempted to " + String(p_operation) + " a variable of type '" + Variant::get_type_name(inout_variant.get_type()) + "' into a " + where + " of type '" + Variant::get_type_name(type) + "'.");
 		}
 
 		if (type != Variant::OBJECT) {
 			return true;
 		}
+
+		return validate_object(inout_variant, p_operation);
+	}
+
+	_FORCE_INLINE_ bool validate_object(const Variant &p_variant, const char *p_operation = "use") {
+		ERR_FAIL_COND_V(p_variant.get_type() != Variant::OBJECT, false);
+
 #ifdef DEBUG_ENABLED
 		ObjectID object_id = p_variant;
 		if (object_id == ObjectID()) {
-			return true; //fine its null;
+			return true; // This is fine, it's null.
 		}
 		Object *object = ObjectDB::get_instance(object_id);
 		ERR_FAIL_COND_V_MSG(object == nullptr, false, "Attempted to " + String(p_operation) + " an invalid (previously freed?) object instance into a '" + String(where) + ".");
@@ -101,7 +119,7 @@ struct ContainerTypeValidate {
 		}
 #endif
 		if (class_name == StringName()) {
-			return true; //all good, no class type requested
+			return true; // All good, no class type requested.
 		}
 
 		StringName obj_class = object->get_class_name();
@@ -110,12 +128,12 @@ struct ContainerTypeValidate {
 		}
 
 		if (script.is_null()) {
-			return true; //all good
+			return true; // All good, no script requested.
 		}
 
 		Ref<Script> other_script = object->get_script();
 
-		//check base script..
+		// Check base script..
 		ERR_FAIL_COND_V_MSG(other_script.is_null(), false, "Attempted to " + String(p_operation) + " an object into a " + String(where) + ", that does not inherit from '" + String(script->get_class_name()) + "'.");
 		ERR_FAIL_COND_V_MSG(!other_script->inherits_script(script), false, "Attempted to " + String(p_operation) + " an object into a " + String(where) + ", that does not inherit from '" + String(script->get_class_name()) + "'.");
 

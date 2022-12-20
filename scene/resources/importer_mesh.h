@@ -93,7 +93,7 @@ public:
 	int get_blend_shape_count() const;
 	String get_blend_shape_name(int p_blend_shape) const;
 
-	void add_surface(Mesh::PrimitiveType p_primitive, const Array &p_arrays, const Array &p_blend_shapes = Array(), const Dictionary &p_lods = Dictionary(), const Ref<Material> &p_material = Ref<Material>(), const String &p_name = String(), const uint32_t p_flags = 0);
+	void add_surface(Mesh::PrimitiveType p_primitive, const Array &p_arrays, const TypedArray<Array> &p_blend_shapes = Array(), const Dictionary &p_lods = Dictionary(), const Ref<Material> &p_material = Ref<Material>(), const String &p_name = String(), const uint32_t p_flags = 0);
 	int get_surface_count() const;
 
 	void set_blend_shape_mode(Mesh::BlendShapeMode p_blend_shape_mode);
@@ -112,14 +112,14 @@ public:
 
 	void set_surface_material(int p_surface, const Ref<Material> &p_material);
 
-	void generate_lods(float p_normal_merge_angle, float p_normal_split_angle);
+	void generate_lods(float p_normal_merge_angle, float p_normal_split_angle, Array p_skin_pose_transform_array);
 
 	void create_shadow_mesh();
 	Ref<ImporterMesh> get_shadow_mesh() const;
 
 	Vector<Face3> get_faces() const;
 	Vector<Ref<Shape3D>> convex_decompose(const Mesh::ConvexDecompositionSettings &p_settings) const;
-	Ref<Shape3D> create_trimesh_shape() const;
+	Ref<ConcavePolygonShape3D> create_trimesh_shape() const;
 	Ref<NavigationMesh> create_navigation_mesh();
 	Error lightmap_unwrap_cached(const Transform3D &p_base_transform, float p_texel_size, const Vector<uint8_t> &p_src_cache, Vector<uint8_t> &r_dst_cache);
 

@@ -31,12 +31,13 @@
 #include "style_box_editor_plugin.h"
 
 #include "editor/editor_scale.h"
+#include "scene/gui/texture_button.h"
 
 bool StyleBoxPreview::grid_preview_enabled = true;
 
 void StyleBoxPreview::_grid_preview_toggled(bool p_active) {
 	grid_preview_enabled = p_active;
-	preview->update();
+	preview->queue_redraw();
 }
 
 bool EditorInspectorPluginStyleBox::can_handle(Object *p_object) {
@@ -66,7 +67,7 @@ void StyleBoxPreview::edit(const Ref<StyleBox> &p_stylebox) {
 }
 
 void StyleBoxPreview::_sb_changed() {
-	preview->update();
+	preview->queue_redraw();
 }
 
 void StyleBoxPreview::_notification(int p_what) {
@@ -80,9 +81,9 @@ void StyleBoxPreview::_notification(int p_what) {
 				// See https://github.com/godotengine/godot/issues/50743.
 				break;
 			}
-			grid_preview->set_normal_texture(get_theme_icon(SNAME("StyleBoxGridInvisible"), SNAME("EditorIcons")));
-			grid_preview->set_pressed_texture(get_theme_icon(SNAME("StyleBoxGridVisible"), SNAME("EditorIcons")));
-			grid_preview->set_hover_texture(get_theme_icon(SNAME("StyleBoxGridVisible"), SNAME("EditorIcons")));
+			grid_preview->set_texture_normal(get_theme_icon(SNAME("StyleBoxGridInvisible"), SNAME("EditorIcons")));
+			grid_preview->set_texture_pressed(get_theme_icon(SNAME("StyleBoxGridVisible"), SNAME("EditorIcons")));
+			grid_preview->set_texture_hover(get_theme_icon(SNAME("StyleBoxGridVisible"), SNAME("EditorIcons")));
 			checkerboard->set_texture(get_theme_icon(SNAME("Checkerboard"), SNAME("EditorIcons")));
 		} break;
 	}

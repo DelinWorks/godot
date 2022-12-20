@@ -56,13 +56,15 @@ class SpriteFramesEditor : public HSplitContainer {
 	};
 	int dominant_param = PARAM_FRAME_COUNT;
 
+	bool read_only = false;
+
 	Button *load = nullptr;
 	Button *load_sheet = nullptr;
-	Button *_delete = nullptr;
+	Button *delete_frame = nullptr;
 	Button *copy = nullptr;
 	Button *paste = nullptr;
-	Button *empty = nullptr;
-	Button *empty2 = nullptr;
+	Button *empty_before = nullptr;
+	Button *empty_after = nullptr;
 	Button *move_up = nullptr;
 	Button *move_down = nullptr;
 	Button *zoom_out = nullptr;
@@ -72,8 +74,8 @@ class SpriteFramesEditor : public HSplitContainer {
 	bool loading_scene;
 	int sel;
 
-	Button *new_anim = nullptr;
-	Button *remove_anim = nullptr;
+	Button *add_anim = nullptr;
+	Button *delete_anim = nullptr;
 	LineEdit *anim_search_box = nullptr;
 
 	Tree *animations = nullptr;
@@ -151,8 +153,6 @@ class SpriteFramesEditor : public HSplitContainer {
 	bool updating;
 	bool updating_split_settings = false; // Skip SpinBox/Range callback when setting value by code.
 
-	UndoRedo *undo_redo = nullptr;
-
 	Variant get_drag_data_fw(const Point2 &p_point, Control *p_from);
 	bool can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) const;
 	void drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from);
@@ -176,8 +176,6 @@ protected:
 	static void _bind_methods();
 
 public:
-	void set_undo_redo(UndoRedo *p_undo_redo) { undo_redo = p_undo_redo; }
-
 	void edit(SpriteFrames *p_frames);
 	SpriteFramesEditor();
 };

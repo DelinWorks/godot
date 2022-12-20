@@ -5,7 +5,7 @@
 	</brief_description>
 	<description>
 		[VoxelGIData] contains baked voxel global illumination for use in a [VoxelGI] node. [VoxelGIData] also offers several properties to adjust the final appearance of the global illumination. These properties can be adjusted at run-time without having to bake the [VoxelGI] node again.
-		[b]Note:[/b] To prevent text-based scene files ([code].tscn[/code]) from growing too much and becoming slow to load and save, always save [VoxelGIData] to an external binary resource file ([code].res[/code]) instead of embedding it within the scene. This can be done by clicking the dropdown arrow next to the [VoxelGIData] resource, choosing [b]Edit[/b], clicking the floppy disk icon at the top of the inspector then choosing [b]Save As...[/b].
+		[b]Note:[/b] To prevent text-based scene files ([code].tscn[/code]) from growing too much and becoming slow to load and save, always save [VoxelGIData] to an external binary resource file ([code].res[/code]) instead of embedding it within the scene. This can be done by clicking the dropdown arrow next to the [VoxelGIData] resource, choosing [b]Edit[/b], clicking the floppy disk icon at the top of the Inspector then choosing [b]Save As...[/b].
 	</description>
 	<tutorials>
 		<link title="Third Person Shooter Demo">https://godotengine.org/asset-library/asset/678</link>
@@ -13,13 +13,13 @@
 	<methods>
 		<method name="allocate">
 			<return type="void" />
-			<argument index="0" name="to_cell_xform" type="Transform3D" />
-			<argument index="1" name="aabb" type="AABB" />
-			<argument index="2" name="octree_size" type="Vector3" />
-			<argument index="3" name="octree_cells" type="PackedByteArray" />
-			<argument index="4" name="data_cells" type="PackedByteArray" />
-			<argument index="5" name="distance_field" type="PackedByteArray" />
-			<argument index="6" name="level_counts" type="PackedInt32Array" />
+			<param index="0" name="to_cell_xform" type="Transform3D" />
+			<param index="1" name="aabb" type="AABB" />
+			<param index="2" name="octree_size" type="Vector3" />
+			<param index="3" name="octree_cells" type="PackedByteArray" />
+			<param index="4" name="data_cells" type="PackedByteArray" />
+			<param index="5" name="distance_field" type="PackedByteArray" />
+			<param index="6" name="level_counts" type="PackedInt32Array" />
 			<description>
 			</description>
 		</method>

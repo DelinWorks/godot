@@ -47,7 +47,7 @@ void ShaderInclude::set_code(const String &p_code) {
 	{
 		String pp_code;
 		ShaderPreprocessor preprocessor;
-		preprocessor.preprocess(p_code, pp_code, nullptr, nullptr, &new_dependencies);
+		preprocessor.preprocess(p_code, "", pp_code, nullptr, nullptr, nullptr, &new_dependencies);
 	}
 
 	// This ensures previous include resources are not freed and then re-loaded during parse (which would make compiling slower)
@@ -81,7 +81,7 @@ Ref<Resource> ResourceFormatLoaderShaderInclude::load(const String &p_path, cons
 	Ref<ShaderInclude> shader_inc;
 	shader_inc.instantiate();
 
-	Vector<uint8_t> buffer = FileAccess::get_file_as_array(p_path);
+	Vector<uint8_t> buffer = FileAccess::get_file_as_bytes(p_path);
 
 	String str;
 	str.parse_utf8((const char *)buffer.ptr(), buffer.size());

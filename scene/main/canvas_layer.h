@@ -64,7 +64,7 @@ class CanvasLayer : public Node {
 protected:
 	void _notification(int p_what);
 	static void _bind_methods();
-	void _validate_property(PropertyInfo &property) const override;
+	void _validate_property(PropertyInfo &p_property) const;
 
 public:
 	void set_layer(int p_xform);
@@ -77,6 +77,7 @@ public:
 
 	void set_transform(const Transform2D &p_xform);
 	Transform2D get_transform() const;
+	Transform2D get_final_transform() const;
 
 	void set_offset(const Vector2 &p_offset);
 	Vector2 get_offset() const;

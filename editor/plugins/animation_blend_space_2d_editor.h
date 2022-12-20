@@ -40,10 +40,15 @@
 #include "scene/gui/separator.h"
 #include "scene/gui/tree.h"
 
+class CheckBox;
+class OptionButton;
+class PanelContainer;
+
 class AnimationNodeBlendSpace2DEditor : public AnimationTreeNodeEditorPlugin {
 	GDCLASS(AnimationNodeBlendSpace2DEditor, AnimationTreeNodeEditorPlugin);
 
 	Ref<AnimationNodeBlendSpace2D> blend_space;
+	bool read_only = false;
 
 	PanelContainer *panel = nullptr;
 	Button *tool_blend = nullptr;
@@ -81,8 +86,6 @@ class AnimationNodeBlendSpace2DEditor : public AnimationTreeNodeEditorPlugin {
 	Label *error_label = nullptr;
 
 	bool updating;
-
-	UndoRedo *undo_redo = nullptr;
 
 	static AnimationNodeBlendSpace2DEditor *singleton;
 

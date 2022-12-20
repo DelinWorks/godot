@@ -31,8 +31,14 @@
 #ifndef GLTF_SPEC_GLOSS_H
 #define GLTF_SPEC_GLOSS_H
 
-#include "core/io/image.h"
 #include "core/io/resource.h"
+
+class Image;
+
+// KHR_materials_pbrSpecularGlossiness is an archived GLTF extension.
+// This means that it is deprecated and not recommended for new files.
+// However, it is still supported for loading old files.
+// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Archived/KHR_materials_pbrSpecularGlossiness
 
 class GLTFSpecGloss : public Resource {
 	GDCLASS(GLTFSpecGloss, Resource);

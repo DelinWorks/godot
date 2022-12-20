@@ -56,6 +56,9 @@ private:
 	Ref<Material> material;
 	bool flip_faces = false;
 
+	bool add_uv2 = false;
+	float uv2_padding = 2.0;
+
 	// make sure we do an update after we've finished constructing our object
 	mutable bool pending_request = true;
 	void _update() const;
@@ -70,12 +73,16 @@ protected:
 	void _request_update();
 	GDVIRTUAL0RC(Array, _create_mesh_array)
 
+	Vector2 get_uv2_scale(Vector2 p_margin_scale = Vector2(1.0, 1.0)) const;
+	float get_lightmap_texel_size() const;
+	virtual void _update_lightmap_size(){};
+
 public:
 	virtual int get_surface_count() const override;
 	virtual int surface_get_array_len(int p_idx) const override;
 	virtual int surface_get_array_index_len(int p_idx) const override;
 	virtual Array surface_get_arrays(int p_surface) const override;
-	virtual Array surface_get_blend_shape_arrays(int p_surface) const override;
+	virtual TypedArray<Array> surface_get_blend_shape_arrays(int p_surface) const override;
 	virtual Dictionary surface_get_lods(int p_surface) const override;
 	virtual uint32_t surface_get_format(int p_idx) const override;
 	virtual Mesh::PrimitiveType surface_get_primitive_type(int p_idx) const override;
@@ -98,6 +105,12 @@ public:
 	void set_flip_faces(bool p_enable);
 	bool get_flip_faces() const;
 
+	void set_add_uv2(bool p_enable);
+	bool get_add_uv2() const { return add_uv2; }
+
+	void set_uv2_padding(float p_padding);
+	float get_uv2_padding() const { return uv2_padding; }
+
 	PrimitiveMesh();
 	~PrimitiveMesh();
 };
@@ -118,8 +131,10 @@ protected:
 	static void _bind_methods();
 	virtual void _create_mesh_array(Array &p_arr) const override;
 
+	virtual void _update_lightmap_size() override;
+
 public:
-	static void create_mesh_array(Array &p_arr, float radius, float height, int radial_segments = 64, int rings = 8);
+	static void create_mesh_array(Array &p_arr, float radius, float height, int radial_segments = 64, int rings = 8, bool p_add_uv2 = false, const float p_uv2_padding = 1.0);
 
 	void set_radius(const float p_radius);
 	float get_radius() const;
@@ -152,8 +167,10 @@ protected:
 	static void _bind_methods();
 	virtual void _create_mesh_array(Array &p_arr) const override;
 
+	virtual void _update_lightmap_size() override;
+
 public:
-	static void create_mesh_array(Array &p_arr, Vector3 size, int subdivide_w = 0, int subdivide_h = 0, int subdivide_d = 0);
+	static void create_mesh_array(Array &p_arr, Vector3 size, int subdivide_w = 0, int subdivide_h = 0, int subdivide_d = 0, bool p_add_uv2 = false, const float p_uv2_padding = 1.0);
 
 	void set_size(const Vector3 &p_size);
 	Vector3 get_size() const;
@@ -190,8 +207,10 @@ protected:
 	static void _bind_methods();
 	virtual void _create_mesh_array(Array &p_arr) const override;
 
+	virtual void _update_lightmap_size() override;
+
 public:
-	static void create_mesh_array(Array &p_arr, float top_radius, float bottom_radius, float height, int radial_segments = 64, int rings = 4, bool cap_top = true, bool cap_bottom = true);
+	static void create_mesh_array(Array &p_arr, float top_radius, float bottom_radius, float height, int radial_segments = 64, int rings = 4, bool cap_top = true, bool cap_bottom = true, bool p_add_uv2 = false, const float p_uv2_padding = 1.0);
 
 	void set_top_radius(const float p_radius);
 	float get_top_radius() const;
@@ -217,21 +236,31 @@ public:
 	CylinderMesh();
 };
 
-/**
-	Similar to quadmesh but with tessellation support
+/*
+	A flat rectangle, can be used as quad or heightmap.
 */
 class PlaneMesh : public PrimitiveMesh {
 	GDCLASS(PlaneMesh, PrimitiveMesh);
+
+public:
+	enum Orientation {
+		FACE_X,
+		FACE_Y,
+		FACE_Z,
+	};
 
 private:
 	Size2 size = Size2(2.0, 2.0);
 	int subdivide_w = 0;
 	int subdivide_d = 0;
 	Vector3 center_offset;
+	Orientation orientation = FACE_Y;
 
 protected:
 	static void _bind_methods();
 	virtual void _create_mesh_array(Array &p_arr) const override;
+
+	virtual void _update_lightmap_size() override;
 
 public:
 	void set_size(const Size2 &p_size);
@@ -246,7 +275,25 @@ public:
 	void set_center_offset(const Vector3 p_offset);
 	Vector3 get_center_offset() const;
 
+	void set_orientation(const Orientation p_orientation);
+	Orientation get_orientation() const;
+
 	PlaneMesh();
+};
+
+VARIANT_ENUM_CAST(PlaneMesh::Orientation)
+
+/*
+	A flat rectangle, inherits from PlaneMesh but defaults to facing the Z-plane.
+*/
+class QuadMesh : public PlaneMesh {
+	GDCLASS(QuadMesh, PlaneMesh);
+
+public:
+	QuadMesh() {
+		set_orientation(FACE_Z);
+		set_size(Size2(1, 1));
+	}
 };
 
 /**
@@ -265,6 +312,8 @@ private:
 protected:
 	static void _bind_methods();
 	virtual void _create_mesh_array(Array &p_arr) const override;
+
+	virtual void _update_lightmap_size() override;
 
 public:
 	void set_left_to_right(const float p_left_to_right);
@@ -286,33 +335,6 @@ public:
 };
 
 /**
-	Our original quadmesh...
-*/
-
-class QuadMesh : public PrimitiveMesh {
-	GDCLASS(QuadMesh, PrimitiveMesh);
-
-private:
-	Size2 size = Size2(1.0, 1.0);
-	Vector3 center_offset;
-
-protected:
-	static void _bind_methods();
-	virtual void _create_mesh_array(Array &p_arr) const override;
-
-public:
-	virtual uint32_t surface_get_format(int p_idx) const override;
-
-	QuadMesh();
-
-	void set_size(const Size2 &p_size);
-	Size2 get_size() const;
-
-	void set_center_offset(const Vector3 p_offset);
-	Vector3 get_center_offset() const;
-};
-
-/**
 	A sphere..
 */
 class SphereMesh : public PrimitiveMesh {
@@ -329,8 +351,10 @@ protected:
 	static void _bind_methods();
 	virtual void _create_mesh_array(Array &p_arr) const override;
 
+	virtual void _update_lightmap_size() override;
+
 public:
-	static void create_mesh_array(Array &p_arr, float radius, float height, int radial_segments = 64, int rings = 32, bool is_hemisphere = false);
+	static void create_mesh_array(Array &p_arr, float radius, float height, int radial_segments = 64, int rings = 32, bool is_hemisphere = false, bool p_add_uv2 = false, const float p_uv2_padding = 1.0);
 
 	void set_radius(const float p_radius);
 	float get_radius() const;
@@ -365,6 +389,8 @@ private:
 protected:
 	static void _bind_methods();
 	virtual void _create_mesh_array(Array &p_arr) const override;
+
+	virtual void _update_lightmap_size() override;
 
 public:
 	void set_inner_radius(const float p_inner_radius);
@@ -548,14 +574,21 @@ private:
 	mutable HashMap<GlyphMeshKey, GlyphMeshData, GlyphMeshKeyHasher> cache;
 
 	RID text_rid;
+	mutable Vector<RID> lines_rid;
+
 	String text;
 	String xl_text;
 
 	int font_size = 16;
 	Ref<Font> font_override;
+
+	TextServer::AutowrapMode autowrap_mode = TextServer::AUTOWRAP_OFF;
 	float width = 500.0;
+	float line_spacing = 0.f;
+	Point2 lbl_offset;
 
 	HorizontalAlignment horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER;
+	VerticalAlignment vertical_alignment = VERTICAL_ALIGNMENT_CENTER;
 	bool uppercase = false;
 	String language;
 	TextServer::Direction text_direction = TextServer::DIRECTION_AUTO;
@@ -566,6 +599,7 @@ private:
 	real_t pixel_size = 0.01;
 	real_t curve_step = 0.5;
 
+	mutable bool dirty_lines = true;
 	mutable bool dirty_text = true;
 	mutable bool dirty_font = true;
 	mutable bool dirty_cache = true;
@@ -588,6 +622,9 @@ public:
 	void set_horizontal_alignment(HorizontalAlignment p_alignment);
 	HorizontalAlignment get_horizontal_alignment() const;
 
+	void set_vertical_alignment(VerticalAlignment p_alignment);
+	VerticalAlignment get_vertical_alignment() const;
+
 	void set_text(const String &p_string);
 	String get_text() const;
 
@@ -597,6 +634,12 @@ public:
 
 	void set_font_size(int p_size);
 	int get_font_size() const;
+
+	void set_line_spacing(float p_size);
+	float get_line_spacing() const;
+
+	void set_autowrap_mode(TextServer::AutowrapMode p_mode);
+	TextServer::AutowrapMode get_autowrap_mode() const;
 
 	void set_text_direction(TextServer::Direction p_text_direction);
 	TextServer::Direction get_text_direction() const;
@@ -624,6 +667,9 @@ public:
 
 	void set_pixel_size(real_t p_amount);
 	real_t get_pixel_size() const;
+
+	void set_offset(const Point2 &p_offset);
+	Point2 get_offset() const;
 };
 
 VARIANT_ENUM_CAST(RibbonTrailMesh::Shape)

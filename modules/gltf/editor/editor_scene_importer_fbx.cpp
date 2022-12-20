@@ -33,12 +33,10 @@
 #ifdef TOOLS_ENABLED
 
 #include "../gltf_document.h"
-#include "../gltf_state.h"
 
 #include "core/config/project_settings.h"
 #include "editor/editor_settings.h"
-#include "scene/main/node.h"
-#include "scene/resources/animation.h"
+#include "main/main.h"
 
 uint32_t EditorSceneFormatImporterFBX::get_import_flags() const {
 	return ImportFlags::IMPORT_SCENE | ImportFlags::IMPORT_ANIMATION;
@@ -49,7 +47,7 @@ void EditorSceneFormatImporterFBX::get_extensions(List<String> *r_extensions) co
 }
 
 Node *EditorSceneFormatImporterFBX::import_scene(const String &p_path, uint32_t p_flags,
-		const HashMap<StringName, Variant> &p_options, int p_bake_fps,
+		const HashMap<StringName, Variant> &p_options,
 		List<String> *r_missing_deps, Error *r_err) {
 	// Get global paths for source and sink.
 
@@ -57,7 +55,7 @@ Node *EditorSceneFormatImporterFBX::import_scene(const String &p_path, uint32_t 
 	// enclosed in double quotes by OS::execute(), so we only need to escape those.
 	// `c_escape_multiline()` seems to do this (escapes `\` and `"` only).
 	const String source_global = ProjectSettings::get_singleton()->globalize_path(p_path).c_escape_multiline();
-	const String sink = ProjectSettings::get_singleton()->get_imported_files_path().plus_file(
+	const String sink = ProjectSettings::get_singleton()->get_imported_files_path().path_join(
 			vformat("%s-%s.glb", p_path.get_file().get_basename(), p_path.md5_text()));
 	const String sink_global = ProjectSettings::get_singleton()->globalize_path(sink).c_escape_multiline();
 
@@ -95,14 +93,14 @@ Node *EditorSceneFormatImporterFBX::import_scene(const String &p_path, uint32_t 
 	Ref<GLTFState> state;
 	state.instantiate();
 	print_verbose(vformat("glTF path: %s", sink));
-	Error err = gltf->append_from_file(sink, state, p_flags, p_bake_fps);
+	Error err = gltf->append_from_file(sink, state, p_flags);
 	if (err != OK) {
 		if (r_err) {
 			*r_err = FAILED;
 		}
 		return nullptr;
 	}
-	return gltf->generate_scene(state, p_bake_fps);
+	return gltf->generate_scene(state, (float)p_options["animation/fps"], (bool)p_options["animation/trimming"]);
 }
 
 Variant EditorSceneFormatImporterFBX::get_option_visibility(const String &p_path, bool p_for_animation,
@@ -112,6 +110,32 @@ Variant EditorSceneFormatImporterFBX::get_option_visibility(const String &p_path
 
 void EditorSceneFormatImporterFBX::get_import_options(const String &p_path,
 		List<ResourceImporter::ImportOption> *r_options) {
+}
+
+bool EditorFileSystemImportFormatSupportQueryFBX::is_active() const {
+	String fbx2gltf_path = EDITOR_GET("filesystem/import/fbx/fbx2gltf_path");
+	return !FileAccess::exists(fbx2gltf_path);
+}
+
+Vector<String> EditorFileSystemImportFormatSupportQueryFBX::get_file_extensions() const {
+	Vector<String> ret;
+	ret.push_back("fbx");
+	return ret;
+}
+
+bool EditorFileSystemImportFormatSupportQueryFBX::query() {
+	FBXImporterManager::get_singleton()->show_dialog(true);
+
+	while (true) {
+		OS::get_singleton()->delay_usec(1);
+		DisplayServer::get_singleton()->process_events();
+		Main::iteration();
+		if (!FBXImporterManager::get_singleton()->is_visible()) {
+			break;
+		}
+	}
+
+	return false;
 }
 
 #endif // TOOLS_ENABLED

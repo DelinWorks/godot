@@ -49,8 +49,6 @@ private:
 	LocalVector<HashMap<Vector2i, Vector2i>> merged_mapping;
 	Ref<TileSet> tile_set;
 
-	UndoRedo *undo_redo = nullptr;
-
 	// Settings.
 	int next_line_after_column = 30;
 

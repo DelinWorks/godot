@@ -44,6 +44,7 @@
 
 #include "../shaders/canvas.glsl.gen.h"
 #include "../shaders/cubemap_filter.glsl.gen.h"
+#include "../shaders/particles.glsl.gen.h"
 #include "../shaders/scene.glsl.gen.h"
 #include "../shaders/sky.glsl.gen.h"
 
@@ -52,15 +53,20 @@ namespace GLES3 {
 /* Shader Structs */
 
 struct ShaderData {
-	virtual void set_code(const String &p_Code) = 0;
-	virtual void set_default_texture_param(const StringName &p_name, RID p_texture, int p_index) = 0;
-	virtual void get_shader_uniform_list(List<PropertyInfo> *p_param_list) const = 0;
+	String path;
+	HashMap<StringName, ShaderLanguage::ShaderNode::Uniform> uniforms;
+	HashMap<StringName, HashMap<int, RID>> default_texture_params;
 
-	virtual void get_instance_param_list(List<RendererMaterialStorage::InstanceShaderParam> *p_param_list) const = 0;
-	virtual bool is_param_texture(const StringName &p_param) const = 0;
+	virtual void set_path_hint(const String &p_hint);
+	virtual void set_default_texture_parameter(const StringName &p_name, RID p_texture, int p_index);
+	virtual Variant get_default_parameter(const StringName &p_parameter) const;
+	virtual void get_shader_uniform_list(List<PropertyInfo> *p_param_list) const;
+	virtual void get_instance_param_list(List<RendererMaterialStorage::InstanceShaderParam> *p_param_list) const;
+	virtual bool is_parameter_texture(const StringName &p_param) const;
+
+	virtual void set_code(const String &p_Code) = 0;
 	virtual bool is_animated() const = 0;
 	virtual bool casts_shadows() const = 0;
-	virtual Variant get_default_parameter(const StringName &p_parameter) const = 0;
 	virtual RS::ShaderNativeSourceCode get_native_source_code() const { return RS::ShaderNativeSourceCode(); }
 
 	virtual ~ShaderData() {}
@@ -142,35 +148,28 @@ struct CanvasShaderData : public ShaderData {
 		BLEND_MODE_MUL,
 		BLEND_MODE_PMALPHA,
 		BLEND_MODE_DISABLED,
+		BLEND_MODE_LCD,
 	};
 
 	bool valid;
 	RID version;
-	String path;
 	BlendMode blend_mode = BLEND_MODE_MIX;
 
-	HashMap<StringName, ShaderLanguage::ShaderNode::Uniform> uniforms;
 	Vector<ShaderCompiler::GeneratedCode::Texture> texture_uniforms;
 
 	Vector<uint32_t> ubo_offsets;
 	uint32_t ubo_size;
 
 	String code;
-	HashMap<StringName, HashMap<int, RID>> default_texture_params;
 
 	bool uses_screen_texture = false;
+	bool uses_screen_texture_mipmaps = false;
 	bool uses_sdf = false;
 	bool uses_time = false;
 
 	virtual void set_code(const String &p_Code);
-	virtual void set_default_texture_param(const StringName &p_name, RID p_texture, int p_index);
-	virtual void get_shader_uniform_list(List<PropertyInfo> *p_param_list) const;
-	virtual void get_instance_param_list(List<RendererMaterialStorage::InstanceShaderParam> *p_param_list) const;
-
-	virtual bool is_param_texture(const StringName &p_param) const;
 	virtual bool is_animated() const;
 	virtual bool casts_shadows() const;
-	virtual Variant get_default_parameter(const StringName &p_parameter) const;
 	virtual RS::ShaderNativeSourceCode get_native_source_code() const;
 
 	CanvasShaderData();
@@ -197,15 +196,12 @@ struct SkyShaderData : public ShaderData {
 	bool valid;
 	RID version;
 
-	HashMap<StringName, ShaderLanguage::ShaderNode::Uniform> uniforms;
 	Vector<ShaderCompiler::GeneratedCode::Texture> texture_uniforms;
 
 	Vector<uint32_t> ubo_offsets;
 	uint32_t ubo_size;
 
-	String path;
 	String code;
-	HashMap<StringName, HashMap<int, RID>> default_texture_params;
 
 	bool uses_time;
 	bool uses_position;
@@ -214,13 +210,8 @@ struct SkyShaderData : public ShaderData {
 	bool uses_light;
 
 	virtual void set_code(const String &p_Code);
-	virtual void set_default_texture_param(const StringName &p_name, RID p_texture, int p_index);
-	virtual void get_shader_uniform_list(List<PropertyInfo> *p_param_list) const;
-	virtual void get_instance_param_list(List<RendererMaterialStorage::InstanceShaderParam> *p_param_list) const;
-	virtual bool is_param_texture(const StringName &p_param) const;
 	virtual bool is_animated() const;
 	virtual bool casts_shadows() const;
-	virtual Variant get_default_parameter(const StringName &p_parameter) const;
 	virtual RS::ShaderNativeSourceCode get_native_source_code() const;
 	SkyShaderData();
 	virtual ~SkyShaderData();
@@ -278,16 +269,12 @@ struct SceneShaderData : public ShaderData {
 	bool valid;
 	RID version;
 
-	String path;
-
-	HashMap<StringName, ShaderLanguage::ShaderNode::Uniform> uniforms;
 	Vector<ShaderCompiler::GeneratedCode::Texture> texture_uniforms;
 
 	Vector<uint32_t> ubo_offsets;
 	uint32_t ubo_size;
 
 	String code;
-	HashMap<StringName, HashMap<int, RID>> default_texture_params;
 
 	BlendMode blend_mode;
 	AlphaAntiAliasing alpha_antialiasing_mode;
@@ -312,9 +299,12 @@ struct SceneShaderData : public ShaderData {
 	bool uses_sss;
 	bool uses_transmittance;
 	bool uses_screen_texture;
+	bool uses_screen_texture_mipmaps;
 	bool uses_depth_texture;
 	bool uses_normal_texture;
 	bool uses_time;
+	bool uses_vertex_time;
+	bool uses_fragment_time;
 	bool writes_modelview_or_projection;
 	bool uses_world_coordinates;
 	bool uses_tangent;
@@ -334,14 +324,8 @@ struct SceneShaderData : public ShaderData {
 	uint32_t index = 0;
 
 	virtual void set_code(const String &p_Code);
-	virtual void set_default_texture_param(const StringName &p_name, RID p_texture, int p_index);
-	virtual void get_shader_uniform_list(List<PropertyInfo> *p_param_list) const;
-	virtual void get_instance_param_list(List<RendererMaterialStorage::InstanceShaderParam> *p_param_list) const;
-
-	virtual bool is_param_texture(const StringName &p_param) const;
 	virtual bool is_animated() const;
 	virtual bool casts_shadows() const;
-	virtual Variant get_default_parameter(const StringName &p_parameter) const;
 	virtual RS::ShaderNativeSourceCode get_native_source_code() const;
 
 	SceneShaderData();
@@ -365,6 +349,53 @@ struct SceneMaterialData : public MaterialData {
 
 MaterialData *_create_scene_material_func(ShaderData *p_shader);
 
+/* Particle Shader */
+
+enum {
+	PARTICLES_MAX_USERDATAS = 6
+};
+
+struct ParticlesShaderData : public ShaderData {
+	bool valid = false;
+	RID version;
+	bool uses_collision = false;
+
+	Vector<ShaderCompiler::GeneratedCode::Texture> texture_uniforms;
+
+	Vector<uint32_t> ubo_offsets;
+	uint32_t ubo_size = 0;
+
+	String code;
+
+	bool uses_time = false;
+
+	bool userdatas_used[PARTICLES_MAX_USERDATAS] = {};
+	uint32_t userdata_count = 0;
+
+	virtual void set_code(const String &p_Code);
+	virtual bool is_animated() const;
+	virtual bool casts_shadows() const;
+	virtual RS::ShaderNativeSourceCode get_native_source_code() const;
+
+	ParticlesShaderData() {}
+	virtual ~ParticlesShaderData();
+};
+
+ShaderData *_create_particles_shader_func();
+
+struct ParticleProcessMaterialData : public MaterialData {
+	ParticlesShaderData *shader_data = nullptr;
+	RID uniform_set;
+
+	virtual void set_render_priority(int p_priority) {}
+	virtual void set_next_pass(RID p_pass) {}
+	virtual void update_parameters(const HashMap<StringName, Variant> &p_parameters, bool p_uniform_dirty, bool p_textures_dirty);
+	virtual void bind_uniforms();
+	virtual ~ParticleProcessMaterialData();
+};
+
+MaterialData *_create_particles_material_func(ShaderData *p_shader);
+
 /* Global shader uniform structs */
 struct GlobalShaderUniforms {
 	enum {
@@ -373,7 +404,7 @@ struct GlobalShaderUniforms {
 	struct Variable {
 		HashSet<RID> texture_materials; // materials using this
 
-		RS::GlobalShaderUniformType type;
+		RS::GlobalShaderParameterType type;
 		Variant value;
 		Variant override;
 		int32_t buffer_index; //for vectors
@@ -434,7 +465,7 @@ private:
 	GlobalShaderUniforms global_shader_uniforms;
 
 	int32_t _global_shader_uniform_allocate(uint32_t p_elements);
-	void _global_shader_uniform_store_in_buffer(int32_t p_index, RS::GlobalShaderUniformType p_type, const Variant &p_value);
+	void _global_shader_uniform_store_in_buffer(int32_t p_index, RS::GlobalShaderParameterType p_type, const Variant &p_value);
 	void _global_shader_uniform_mark_buffer_dirty(int32_t p_index, int32_t p_elements);
 
 	/* SHADER API */
@@ -491,7 +522,7 @@ public:
 	static _FORCE_INLINE_ void store_camera(const Projection &p_mtx, float *p_array) {
 		for (int i = 0; i < 4; i++) {
 			for (int j = 0; j < 4; j++) {
-				p_array[i * 4 + j] = p_mtx.matrix[i][j];
+				p_array[i * 4 + j] = p_mtx.columns[i][j];
 			}
 		}
 	}
@@ -501,6 +532,7 @@ public:
 		SkyShaderGLES3 sky_shader;
 		SceneShaderGLES3 scene_shader;
 		CubemapFilterShaderGLES3 cubemap_filter_shader;
+		ParticlesShaderGLES3 particles_process_shader;
 
 		ShaderCompiler compiler_canvas;
 		ShaderCompiler compiler_scene;
@@ -512,24 +544,24 @@ public:
 
 	void _update_global_shader_uniforms();
 
-	virtual void global_shader_uniform_add(const StringName &p_name, RS::GlobalShaderUniformType p_type, const Variant &p_value) override;
-	virtual void global_shader_uniform_remove(const StringName &p_name) override;
-	virtual Vector<StringName> global_shader_uniform_get_list() const override;
+	virtual void global_shader_parameter_add(const StringName &p_name, RS::GlobalShaderParameterType p_type, const Variant &p_value) override;
+	virtual void global_shader_parameter_remove(const StringName &p_name) override;
+	virtual Vector<StringName> global_shader_parameter_get_list() const override;
 
-	virtual void global_shader_uniform_set(const StringName &p_name, const Variant &p_value) override;
-	virtual void global_shader_uniform_set_override(const StringName &p_name, const Variant &p_value) override;
-	virtual Variant global_shader_uniform_get(const StringName &p_name) const override;
-	virtual RS::GlobalShaderUniformType global_shader_uniform_get_type(const StringName &p_name) const override;
-	RS::GlobalShaderUniformType global_shader_uniform_get_type_internal(const StringName &p_name) const;
+	virtual void global_shader_parameter_set(const StringName &p_name, const Variant &p_value) override;
+	virtual void global_shader_parameter_set_override(const StringName &p_name, const Variant &p_value) override;
+	virtual Variant global_shader_parameter_get(const StringName &p_name) const override;
+	virtual RS::GlobalShaderParameterType global_shader_parameter_get_type(const StringName &p_name) const override;
+	RS::GlobalShaderParameterType global_shader_parameter_get_type_internal(const StringName &p_name) const;
 
-	virtual void global_shader_uniforms_load_settings(bool p_load_textures = true) override;
-	virtual void global_shader_uniforms_clear() override;
+	virtual void global_shader_parameters_load_settings(bool p_load_textures = true) override;
+	virtual void global_shader_parameters_clear() override;
 
-	virtual int32_t global_shader_uniforms_instance_allocate(RID p_instance) override;
-	virtual void global_shader_uniforms_instance_free(RID p_instance) override;
-	virtual void global_shader_uniforms_instance_update(RID p_instance, int p_index, const Variant &p_value) override;
+	virtual int32_t global_shader_parameters_instance_allocate(RID p_instance) override;
+	virtual void global_shader_parameters_instance_free(RID p_instance) override;
+	virtual void global_shader_parameters_instance_update(RID p_instance, int p_index, const Variant &p_value, int p_flags_count = 0) override;
 
-	GLuint global_shader_uniforms_get_uniform_buffer() const;
+	GLuint global_shader_parameters_get_uniform_buffer() const;
 
 	/* SHADER API */
 
@@ -545,11 +577,11 @@ public:
 	virtual void shader_set_code(RID p_shader, const String &p_code) override;
 	virtual void shader_set_path_hint(RID p_shader, const String &p_path) override;
 	virtual String shader_get_code(RID p_shader) const override;
-	virtual void shader_get_shader_uniform_list(RID p_shader, List<PropertyInfo> *p_param_list) const override;
+	virtual void get_shader_parameter_list(RID p_shader, List<PropertyInfo> *p_param_list) const override;
 
-	virtual void shader_set_default_texture_param(RID p_shader, const StringName &p_name, RID p_texture, int p_index) override;
-	virtual RID shader_get_default_texture_param(RID p_shader, const StringName &p_name, int p_index) const override;
-	virtual Variant shader_get_param_default(RID p_shader, const StringName &p_param) const override;
+	virtual void shader_set_default_texture_parameter(RID p_shader, const StringName &p_name, RID p_texture, int p_index) override;
+	virtual RID shader_get_default_texture_parameter(RID p_shader, const StringName &p_name, int p_index) const override;
+	virtual Variant shader_get_parameter_default(RID p_shader, const StringName &p_name) const override;
 
 	virtual RS::ShaderNativeSourceCode shader_get_native_source_code(RID p_shader) const override;
 
@@ -576,7 +608,7 @@ public:
 	virtual bool material_is_animated(RID p_material) override;
 	virtual bool material_casts_shadows(RID p_material) override;
 
-	virtual void material_get_instance_shader_uniforms(RID p_material, List<InstanceShaderParam> *r_parameters) override;
+	virtual void material_get_instance_shader_parameters(RID p_material, List<InstanceShaderParam> *r_parameters) override;
 
 	virtual void material_update_dependency(RID p_material, DependencyTracker *p_instance) override;
 

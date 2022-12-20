@@ -36,9 +36,10 @@
 // Godot classes used by GLTF headers.
 class BoneAttachment3D;
 class CSGShape3D;
-class DirectionalLight3D;
 class GridMap;
+class ImporterMeshInstance3D;
 class Light3D;
+class MeshInstance3D;
 class MultiMeshInstance3D;
 class Skeleton3D;
 class Skin;
@@ -58,6 +59,7 @@ class GLTFSkin;
 class GLTFSpecGloss;
 class GLTFState;
 class GLTFTexture;
+class GLTFTextureSampler;
 
 // GLTF index aliases.
 using GLTFAccessorIndex = int;
@@ -66,13 +68,14 @@ using GLTFBufferIndex = int;
 using GLTFBufferViewIndex = int;
 using GLTFCameraIndex = int;
 using GLTFImageIndex = int;
+using GLTFLightIndex = int;
 using GLTFMaterialIndex = int;
 using GLTFMeshIndex = int;
-using GLTFLightIndex = int;
 using GLTFNodeIndex = int;
 using GLTFSkeletonIndex = int;
 using GLTFSkinIndex = int;
 using GLTFTextureIndex = int;
+using GLTFTextureSamplerIndex = int;
 
 enum GLTFType {
 	TYPE_SCALAR,

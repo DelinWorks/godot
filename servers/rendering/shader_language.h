@@ -176,6 +176,9 @@ public:
 		TK_HINT_SOURCE_COLOR,
 		TK_HINT_RANGE,
 		TK_HINT_INSTANCE_INDEX,
+		TK_HINT_SCREEN_TEXTURE,
+		TK_HINT_NORMAL_ROUGHNESS_TEXTURE,
+		TK_HINT_DEPTH_TEXTURE,
 		TK_FILTER_NEAREST,
 		TK_FILTER_LINEAR,
 		TK_FILTER_NEAREST_MIPMAP,
@@ -480,7 +483,7 @@ public:
 		int array_size = 0;
 
 		union Value {
-			bool boolean;
+			bool boolean = false;
 			float real;
 			int32_t sint;
 			uint32_t uint;
@@ -667,6 +670,9 @@ public:
 				HINT_DEFAULT_WHITE,
 				HINT_DEFAULT_TRANSPARENT,
 				HINT_ANISOTROPY,
+				HINT_SCREEN_TEXTURE,
+				HINT_NORMAL_ROUGHNESS_TEXTURE,
+				HINT_DEPTH_TEXTURE,
 				HINT_MAX
 			};
 
@@ -712,6 +718,12 @@ public:
 
 		ShaderNode() :
 				Node(TYPE_SHADER) {}
+	};
+
+	struct UniformOrderComparator {
+		_FORCE_INLINE_ bool operator()(const Pair<StringName, int> &A, const Pair<StringName, int> &B) const {
+			return A.second < B.second;
+		}
 	};
 
 	struct Expression {
@@ -1044,6 +1056,10 @@ private:
 	};
 
 	CompletionType completion_type;
+	ShaderNode::Uniform::Hint current_uniform_hint = ShaderNode::Uniform::HINT_NONE;
+	TextureFilter current_uniform_filter = FILTER_DEFAULT;
+	TextureRepeat current_uniform_repeat = REPEAT_DEFAULT;
+	bool current_uniform_instance_index_defined = false;
 	int completion_line = 0;
 	BlockNode *completion_block = nullptr;
 	DataType completion_base;
@@ -1109,6 +1125,7 @@ public:
 	void clear();
 
 	static String get_shader_type(const String &p_code);
+	static bool is_builtin_func_out_parameter(const String &p_name, int p_param);
 
 	struct ShaderCompileInfo {
 		HashMap<StringName, FunctionInfo> functions;

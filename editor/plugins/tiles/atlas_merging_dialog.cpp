@@ -33,6 +33,7 @@
 #include "editor/editor_file_dialog.h"
 #include "editor/editor_node.h"
 #include "editor/editor_scale.h"
+#include "editor/editor_undo_redo_manager.h"
 
 #include "scene/gui/control.h"
 #include "scene/gui/split_container.h"
@@ -46,9 +47,7 @@ void AtlasMergingDialog::_generate_merged(Vector<Ref<TileSetAtlasSource>> p_atla
 	merged_mapping.clear();
 
 	if (p_atlas_sources.size() >= 2) {
-		Ref<Image> output_image;
-		output_image.instantiate();
-		output_image->create(1, 1, false, Image::FORMAT_RGBA8);
+		Ref<Image> output_image = Image::create_empty(1, 1, false, Image::FORMAT_RGBA8);
 
 		// Compute the new texture region size.
 		Vector2i new_texture_region_size;
@@ -155,6 +154,7 @@ void AtlasMergingDialog::_merge_confirmed(String p_path) {
 	Ref<Texture2D> new_texture_resource = ResourceLoader::load(p_path, "Texture2D");
 	merged->set_texture(new_texture_resource);
 
+	Ref<EditorUndoRedoManager> &undo_redo = EditorNode::get_undo_redo();
 	undo_redo->create_action(TTR("Merge TileSetAtlasSource"));
 	int next_id = tile_set->get_next_source_id();
 	undo_redo->add_do_method(*tile_set, "add_source", merged, next_id);
@@ -194,6 +194,7 @@ void AtlasMergingDialog::ok_pressed() {
 }
 
 void AtlasMergingDialog::cancel_pressed() {
+	Ref<EditorUndoRedoManager> &undo_redo = EditorNode::get_undo_redo();
 	for (int i = 0; i < commited_actions_count; i++) {
 		undo_redo->undo();
 	}
@@ -235,7 +236,7 @@ void AtlasMergingDialog::update_tile_set(Ref<TileSet> p_tile_set) {
 		if (atlas_source.is_valid()) {
 			Ref<Texture2D> texture = atlas_source->get_texture();
 			if (texture.is_valid()) {
-				String item_text = vformat("%s (id:%d)", texture->get_path().get_file(), source_id);
+				String item_text = vformat(TTR("%s (ID: %d)"), texture->get_path().get_file(), source_id);
 				atlas_merging_atlases_list->add_item(item_text, texture);
 				atlas_merging_atlases_list->set_item_metadata(-1, source_id);
 			}
@@ -249,8 +250,6 @@ void AtlasMergingDialog::update_tile_set(Ref<TileSet> p_tile_set) {
 }
 
 AtlasMergingDialog::AtlasMergingDialog() {
-	undo_redo = EditorNode::get_singleton()->get_undo_redo();
-
 	// Atlas merging window.
 	set_title(TTR("Atlas Merging"));
 	set_hide_on_ok(false);
@@ -268,7 +267,7 @@ AtlasMergingDialog::AtlasMergingDialog() {
 
 	// Atlas sources item list.
 	atlas_merging_atlases_list = memnew(ItemList);
-	atlas_merging_atlases_list->set_fixed_icon_size(Size2i(60, 60) * EDSCALE);
+	atlas_merging_atlases_list->set_fixed_icon_size(Size2(60, 60) * EDSCALE);
 	atlas_merging_atlases_list->set_h_size_flags(Control::SIZE_EXPAND_FILL);
 	atlas_merging_atlases_list->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	atlas_merging_atlases_list->set_texture_filter(CanvasItem::TEXTURE_FILTER_NEAREST);

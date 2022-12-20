@@ -61,7 +61,6 @@ class CollisionShape2DEditor : public Control {
 		Point2(1, -1),
 	};
 
-	UndoRedo *undo_redo = nullptr;
 	CanvasItemEditor *canvas_item_editor = nullptr;
 	CollisionShape2D *node = nullptr;
 
